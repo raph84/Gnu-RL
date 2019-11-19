@@ -1,7 +1,6 @@
 # Gnu-RL
 
 This is the companion code repository for [Gnu-RL: A Precocial Reinforcement Learning Solution for Building HVAC Control Using a Differentiable MPC Policy](https://dl.acm.org/citation.cfm?id=3360849). If our paper is helpful to your research, cite us [here](https://scholar.googleusercontent.com/scholar.bib?q=info:Whs_iSYeXh4J:scholar.google.com/&output=citation&scisdr=CgUBk9UIEICerh8cpCI:AAGBfm0AAAAAXdMZvCKyQM-7eUa6T_rmfFyaU7BFiCdj&scisig=AAGBfm0AAAAAXdMZvOG40qtz4XWoUVABW6qbbmVY-HIa&scisf=4&ct=citation&cd=-1&hl=en).
-
  
 ### Description
 Gnu-RL is a novel approach that enables practical deployment of reinforcement learning (RL) for heating, ventilation, and air conditioning (HVAC) control and requires no prior information other than historical data from existing HVAC controllers. 
@@ -29,7 +28,7 @@ $ pip install -r requirements.txt
 (To be Confirmed)
 
 ### Set up Simulation Environments
-We demonstrate Gnu-RL in an EnergyPlus model. Check [here](agent/Demo.ipynb) for details.
+We demonstrate Gnu-RL in an EnergyPlus model. Check [here](Demo.ipynb) for details.
 
 To set up the co-simulation environment with EnergyPlus: 
 - Read the documentation of [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus) on setting up simulation environments. 
@@ -55,7 +54,7 @@ $ python PPO_MPC_EP.py
 
 ### Contact
 - [Bingqing Chen](mailto:bingqinc@andrew.cmu.edu), PhD Candidate at Carnegie Mellon University, Department of Civil and Environmental Engineering, Intelligent Infrastructure Research Laboratory (INFERLab).
-- [Mario Berges](mailto:marioberges@cmu.edu), Professor at Carnegie Mellon University, Department of Civil and Environmental Engineering
+- [Mario Berges](mailto:marioberges@cmu.edu), Professor at Carnegie Mellon University, Department of Civil and Environmental Engineering, INFERLab
 
 ### License
 Copyright (c) 2019 Bingqing Chen
