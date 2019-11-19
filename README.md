@@ -34,13 +34,16 @@ We demonstrate Gnu-RL in an EnergyPlus model. Check [here](Demo.ipynb) for detai
 To set up the co-simulation environment with EnergyPlus: 
 - Read the documentation of [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus) on registering simulation environments. 
 - All the EnergyPlus model files used in the demo are placed under ./eplus_env.
-- Register the environments following this table. A  *\_\_init\_\_.py* for registeration is included. Place it under Gym-Eplus/eplus_env/. 
-- Place the model and weather files in the *eplus_env* folder under the corresponding location in the Gym-Eplus folder.  
+- Register the environments following this table. A  *\_\_init\_\_.py* file for registration is included. Place it under *Gym-Eplus/eplus_env/*. 
+- Place the model and weather files under *Gym-Eplus/eplus_env/envs/* at the corresponding location.  
 - Check that the placement of model files and weather files match *\_\_init\_\_.py*.
-- Finally, change line 24 in Gym-Eplus/eplus_env/envs/eplus8_6.py to  
+- Finally, change line 24 in *Gym-Eplus/eplus_env/envs/eplus8_6.py* to  
+
 '''
 YEAR = 2017 # Non leap year
 '''
+
+
 | **Environment Name** |**Model File (\*.idf)**|**Configuration File (\*.cfg)**|**Weather File (\*.epw)**| 
 |:----------------|:---------------|:--------|:-----------|
 |**5Zone-sim_TMY2-v0**|5Zone_Default.idf|variables_Default.cfg|pittsburgh_TMY2.epw|
