@@ -1,11 +1,15 @@
 import os
 import sys
-# Assign env_path to be the file path where Gym-Eplus is located.
-env_path = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
-sys.path.insert(0, env_path)
+
+import gym
+import eplus_env
+
 # Assign mpc_path to be the file path where mpc.torch is located.
 mpc_path = os.path.abspath(os.path.join(__file__,'..', '..'))
 sys.path.insert(0, mpc_path)
+
+from diff_mpc import mpc
+from diff_mpc.mpc import QuadCost, LinDx
 
 import argparse
 import numpy as np
@@ -14,20 +18,14 @@ import copy
 import pickle
 import matplotlib.pyplot as plt
 
-from mpc import mpc
-from mpc.mpc import QuadCost, LinDx
-
-import gym
-import eplus_env
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import torch.utils.data as data
+import torch.optim as optim
 from torch.distributions import MultivariateNormal, Normal
 
-from utils import make_dict, R_func
+from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
@@ -51,63 +49,6 @@ parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
 args = parser.parse_args()
 
-class Replay_Memory():
-    def __init__(self, memory_size=10):
-        self.memory_size = memory_size
-        self.len = 0
-        self.rewards = []
-        self.states = []
-        self.n_states = []
-        self.log_probs = []
-        self.actions = []
-        self.disturbance = []
-        self.CC = []
-        self.cc = []
-    
-    def sample_batch(self, batch_size):
-        rand_idx = np.arange(-batch_size, 0, 1)
-        batch_rewards = torch.stack([self.rewards[i] for i in rand_idx]).reshape(-1)
-        batch_states = torch.stack([self.states[i] for i in rand_idx])
-        batch_nStates = torch.stack([self.n_states[i] for i in rand_idx])
-        batch_actions = torch.stack([self.actions[i] for i in rand_idx])
-        batch_logprobs = torch.stack([self.log_probs[i] for i in rand_idx]).reshape(-1)
-        batch_disturbance = torch.stack([self.disturbance[i] for i in rand_idx])
-        batch_CC = torch.stack([self.CC[i] for i in rand_idx])
-        batch_cc = torch.stack([self.cc[i] for i in rand_idx])
-        # Flatten
-        _, _, n_state =  batch_states.shape
-        batch_states = batch_states.reshape(-1, n_state)
-        batch_nStates = batch_nStates.reshape(-1, n_state)
-        _, _, n_action =  batch_actions.shape
-        batch_actions = batch_actions.reshape(-1, n_action)
-        _, _, T, n_dist =  batch_disturbance.shape
-        batch_disturbance = batch_disturbance.reshape(-1, T, n_dist)
-        _, _, T, n_tau, n_tau =  batch_CC.shape
-        batch_CC = batch_CC.reshape(-1, T, n_tau, n_tau)
-        batch_cc = batch_cc.reshape(-1, T, n_tau)
-        return batch_states, batch_actions, batch_nStates, batch_disturbance, batch_rewards, batch_logprobs, batch_CC, batch_cc
-    
-    def append(self, states, actions, next_states, rewards, log_probs, dist, CC, cc):
-        self.rewards.append(rewards)
-        self.states.append(states)
-        self.n_states.append(next_states)
-        self.log_probs.append(log_probs)
-        self.actions.append(actions)
-        self.disturbance.append(dist)
-        self.CC.append(CC)
-        self.cc.append(cc)
-        self.len += 1
-        
-        if self.len > self.memory_size:
-            self.len = self.memory_size
-            self.rewards = self.rewards[-self.memory_size:]
-            self.states = self.states[-self.memory_size:]
-            self.log_probs = self.log_probs[-self.memory_size:]
-            self.actions = self.actions[-self.memory_size:]
-            self.nStates = self.n_states[-self.memory_size:]
-            self.disturbance = self.disturbance[-self.memory_size:]
-            self.CC = self.CC[-self.memory_size:]
-            self.cc = self.cc[-self.memory_size:]
 
 class PPO():
     def __init__(self, memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, clip_param = 0.1, F_hat = None, Bd_hat = None):
@@ -253,34 +194,6 @@ class PPO():
         c = c.unsqueeze(1) # T x 1 x (m+n)
         return C, c
 
-# Calculate the advantage estimate
-def Advantage_func(rewards, gamma):
-    R = torch.zeros(1, 1).double()
-    T = len(rewards)
-    advantage = torch.zeros((T,1)).double()
-    
-    for i in reversed(range(len(rewards))):
-        R = gamma * R + rewards[i]
-        advantage[i] = R
-    return advantage
-
-class Dataset(data.Dataset):
-    def __init__(self, states, actions, next_states, disturbance, rewards, old_logprobs, CC, cc):
-        self.states = states
-        self.actions = actions
-        self.next_states = next_states
-        self.disturbance = disturbance
-        self.rewards = rewards
-        self.old_logprobs = old_logprobs
-        self.CC = CC
-        self.cc = cc
-    
-    def __len__(self):
-        return len(self.states)
-    
-    def __getitem__(self, index):
-        return self.states[index], self.actions[index], self.next_states[index], self.disturbance[index], self.rewards[index], self.old_logprobs[index], self.CC[index], self.cc[index]
-
 
 def main():
     # Create Simulation Environment
@@ -292,6 +205,7 @@ def main():
     # Modify here: Change based on the specific control problem
     state_name = ["Indoor Temp."]
     dist_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Occupancy Flag"]
+    # Caveat: The RL agent controls the difference between Supply Air Temp. and Mixed Air Temp., i.e. the amount of heating from the heating coil. But, the E+ expects Supply Air Temp. Setpoint.
     ctrl_name = ["SA Temp Setpoint"]
     target_name = ["Indoor Temp. Setpoint"]
     
@@ -318,8 +232,13 @@ def main():
     memory = Replay_Memory()
     
     # From Imitation Learning
-    F_hat = np.array([[0.9406, 0.2915]])
-    Bd_hat = np.array([[0.0578, 0.4390, 0.2087, 0.5389, 0.5080, 0.1035, 0.4162]])
+    #epoch = 16
+    #F_hat = np.load("results/weights/F-{}.npy".format(epoch))
+    #Bd_hat = np.load("results/weights/Bd-{}.npy".format(epoch))
+    
+    ## After first round of training
+    F_hat = np.array([[0.9248, 0.1440]])
+    Bd_hat = np.array([[0.7404, 0.1490, 0.3049, 0.5458, 0.2676, 0.3085, 0.6900]])
     agent = PPO(memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, F_hat = F_hat, Bd_hat = Bd_hat)
 
     dir = 'results'

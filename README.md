@@ -13,19 +13,22 @@ Specifically, Gnu-RL adopts a recently-developed [Differentiable Model Predictiv
 
 ![policy](imgs/policy.png)
 
-### Installation
-The following two packages were used. Install following their documentation.    
+### Required Packages
+The following two packages were used.    
 - [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus)
     - This package is an OpenGym AI wrapper for EnergyPlus. 
-    - The demonstration in this repo uses EnergyPlus version 8.6, but the Gym-plus package is applicable to any EnergyPlus version 8.x.  
+    - The demonstration in this repo uses EnergyPlus version 8.6, but the Gym-plus package is applicable to any EnergyPlus version 8.x. 
+    - To install: 
+    1. Github submodule
+    2. Move File: Write a bash file to move files... 
 - [mpc.torch](https://github.com/locuslab/mpc.pytorch)
     - This package is a fast and differentiable model predictive control solver for PyTorch.
+    - The required files are already placed under ./diff_mpc. No installation is necessary.
 
 Install other packages by, 
 ```
 $ pip install -r requirements.txt
 ``` 
-(To be Confirmed)
 
 ### Set up Simulation Environments
 We demonstrate Gnu-RL in an EnergyPlus model. Check [here](Demo.ipynb) for details.
@@ -42,6 +45,13 @@ To set up the co-simulation environment with EnergyPlus:
 | **5Zone-sim_TMY3-v0**   | 5Zone_Default.idf|variables_Default.cfg|pittsburgh_TMY3.epw|
 
 ### Files
+
+To generate "historical" data from baseline controller, 
+
+```
+$ python simulate.py
+```
+
 For **Offline Pretraining**, 
 ```
 $ python Imit_EP.py
