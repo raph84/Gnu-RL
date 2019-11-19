@@ -39,9 +39,9 @@ To set up the co-simulation environment with EnergyPlus:
 - Check that the placement of model files and weather files match *\_\_init\_\_.py*.
 - Finally, change line 24 in *Gym-Eplus/eplus_env/envs/eplus8_6.py* to  
 
-'''
-YEAR = 2017 # Non leap year
-'''
+  ```
+  YEAR = 2017 # Non leap year
+  ```
 
 
 | **Environment Name** |**Model File (\*.idf)**|**Configuration File (\*.cfg)**|**Weather File (\*.epw)**| 
