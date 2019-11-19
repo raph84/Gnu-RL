@@ -13,14 +13,12 @@ Specifically, Gnu-RL adopts a recently-developed [Differentiable Model Predictiv
 
 ![policy](imgs/policy.png)
 
-### Required Packages
+### Install Required Packages
 The following two packages were used.    
 - [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus)
     - This package is an OpenGym AI wrapper for EnergyPlus. 
-    - The demonstration in this repo uses EnergyPlus version 8.6, but the Gym-plus package is applicable to any EnergyPlus version 8.x. 
-    - To install: 
-    1. Github submodule
-    2. Move File: Write a bash file to move files... 
+    - Install the package following its [documentation](https://github.com/zhangzhizza/Gym-Eplus).
+    - While the documentation of this repo specifies EnergyPlus version 8.6, but the Gym-plus package is applicable to any EnergyPlus version 8.x. 
 - [mpc.torch](https://github.com/locuslab/mpc.pytorch)
     - This package is a fast and differentiable model predictive control solver for PyTorch.
     - The required files are already placed under ./diff_mpc. No installation is necessary.
@@ -30,19 +28,25 @@ Install other packages by,
 $ pip install -r requirements.txt
 ``` 
 
-### Set up Simulation Environments
+### Register Simulation Environments
 We demonstrate Gnu-RL in an EnergyPlus model. Check [here](Demo.ipynb) for details.
 
 To set up the co-simulation environment with EnergyPlus: 
-- Read the documentation of [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus) on setting up simulation environments. 
-- Place the model and weather files in the *eplus_env* folder under the corresponding location in the Gym-Eplus folder. 
-- Register the environments following this table. A  *\_\_init\_\_.py* for registeration is included. But, check that it matches your own file placement. 
- 
+- Read the documentation of [Gym-Eplus](https://github.com/zhangzhizza/Gym-Eplus) on registering simulation environments. 
+- All the EnergyPlus model files used in the demo are placed under ./eplus_env.
+- Register the environments following this table. A  *\_\_init\_\_.py* for registeration is included. Place it under Gym-Eplus/eplus_env/. 
+- Place the model and weather files in the *eplus_env* folder under the corresponding location in the Gym-Eplus folder.  
+- Check that the placement of model files and weather files match *\_\_init\_\_.py*.
+- Finally, change line 24 in Gym-Eplus/eplus_env/envs/eplus8_6.py to  
+'''
+YEAR = 2017 # Non leap year
+'''
 | **Environment Name** |**Model File (\*.idf)**|**Configuration File (\*.cfg)**|**Weather File (\*.epw)**| 
 |:----------------|:---------------|:--------|:-----------|
 |**5Zone-sim_TMY2-v0**|5Zone_Default.idf|variables_Default.cfg|pittsburgh_TMY2.epw|
 |**5Zone-control_TMY3-v0**|5Zone_Control.idf|variables_Control.cfg|pittsburgh_TMY3.epw|
 | **5Zone-sim_TMY3-v0**   | 5Zone_Default.idf|variables_Default.cfg|pittsburgh_TMY3.epw|
+
 
 ### Files
 
@@ -65,27 +69,6 @@ $ python PPO_MPC_EP.py
 ### Contact
 - [Bingqing Chen](mailto:bingqinc@andrew.cmu.edu), PhD Candidate at Carnegie Mellon University, Department of Civil and Environmental Engineering, Intelligent Infrastructure Research Laboratory (INFERLab).
 - [Mario Berges](mailto:marioberges@cmu.edu), Professor at Carnegie Mellon University, Department of Civil and Environmental Engineering, INFERLab
-
-### License
-Copyright (c) 2019 Bingqing Chen
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 
 

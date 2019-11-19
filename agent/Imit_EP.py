@@ -12,7 +12,6 @@ import argparse
 from numpy import genfromtxt
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from diff_mpc import mpc

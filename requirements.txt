@@ -1,4 +1,6 @@
 numpy
 pandas
-torch
+torch==1.0.1.post2
+pickle
+
 
