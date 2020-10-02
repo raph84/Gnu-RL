@@ -105,3 +105,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+eplus_env/Eplus-env-5Zone-sim-v0-*
