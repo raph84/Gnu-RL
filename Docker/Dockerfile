@@ -19,20 +19,22 @@ RUN apt-get install -y wget && \
        wget -q https://github.com/NREL/EnergyPlus/archive/v8.7.0.tar.gz -O - | tar -xz
 
 # Setup the Python environment
-RUN cd /Gym-Eplus && \ 
+RUN cd / && \ 
         pip3 install virtualenv && \
         virtualenv virt_env --python=python3 && \
-        /bin/bash -c "source virt_env/bin/activate" && \
-        pip3 install gym && \
-        pip3 install -e /Gym-Eplus/ && \
-        cd /Gnu-RL && \
-        pip3 install -r requirements.txt && \
-        cd /Gnu-RL/eplus_env && \
-        cp -R * /Gym-Eplus/eplus_env/ && \
-        pip3 install matplotlib
-
-
-RUN pip3 install jupyterlab
+        /bin/bash -c "source /virt_env/bin/activate && \
+                        pip3 install gym && \
+                        pip3 install -e /Gym-Eplus/ && \
+                        cd /Gnu-RL && \
+                        pip3 install -r requirements.txt && \
+                        cd /Gnu-RL/eplus_env && \
+                        cp -R * /Gym-Eplus/eplus_env/ && \
+                        pip3 install matplotlib && \
+                        pip3 install --upgrade debugpy && \
+                        pip3 install jupyterlab"
 
 # Expose Jupyter port to access it from a browser on the Docker host
 EXPOSE 8888/tcp
+
+# Expose Python debug port
+EXPOSE 5678
