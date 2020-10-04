@@ -41,7 +41,7 @@ The running container contains **Jupyter Lab**. Start it from the container comm
 
 ```
 # Start Jupyter Lab
-jupyter lab --ip 0.0.0.0 --no-browser --port=8888 --allow-root
+jupyter lab --ip 0.0.0.0 --no-browser --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password='' &
 ```
 
 ### Install Required Packages
