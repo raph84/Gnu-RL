@@ -1,3 +1,5 @@
+import debugpy
+
 import os
 import sys
 
@@ -25,6 +27,16 @@ import torch.optim as optim
 from torch.distributions import MultivariateNormal, Normal
 
 from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
+
+import debugpy
+
+# 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+##debugpy.listen(("0.0.0.0",5678))
+##print("Waiting for debugger attach")
+##debugpy.wait_for_client()
+##debugpy.breakpoint()
+print('break on this line')
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
