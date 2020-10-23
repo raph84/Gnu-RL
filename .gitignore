@@ -105,9 +105,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-eplus_env/Eplus-env-5Zone-sim-v0-*
+eplus_env/Eplus-env-*-sim-v*-*
 
-agent/Eplus-env-5Zone-*
+agent/Eplus-env-*-sim-v*-res*
+agent/Eplus-env-*-control-v*-res*
 agent/results
+
+eplus_env/envs/EnergyPlus-8-6-0
+
 .vscode/launch.json
 .vscode/settings.json
+EnergyPlus-8.6.0-198c6a3cff-Linux-x86_64.sh

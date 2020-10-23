@@ -35,12 +35,17 @@ docker build --pull --rm -f "Docker\Dockerfile" -t gnurl:latest "Docker"
 
 # Run the Docker image
 docker run -it -p 8888:8888 -v gnurl:/Gnu-RL gnurl:latest /bin/bash
+
+# or
+
+docker run -it -p 5678:5678 -p 8888:8888 -p 22:22 -v Gym-Eplus-Fs2:/Gym-Eplus -v Gnu-RL-Fs:/Gnu-RL -v Gnu-RL-vscode-fs:/root/.vscode-server gnurl:latest /bin/bash
 ```
 
-The running container contains **Jupyter Lab**. Start it from the container command line and you will be able from your browser.
+The running container contains **Jupyter Lab**. Start it from the container command line and you will be able to access it from your browser.
 
 ```
 # Start Jupyter Lab
+source /virt_env/bin/activate
 jupyter lab --ip 0.0.0.0 --no-browser --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password='' &
 ```
 
