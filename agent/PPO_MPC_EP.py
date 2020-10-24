@@ -288,7 +288,7 @@ def main():
     if not args.api_mode:
         # Create Simulation Environment
         global env
-        env = gym.make('5Zone-control_TMY3-v0')
+        env = gym.make('7Zone-control_TMY3-v0')
 
     n_state = len(state_name)
     n_ctrl = len(ctrl_name)
@@ -302,7 +302,7 @@ def main():
     u_lower = 0
 
     # Read Information on Weather, Occupancy, and Target Setpoint
-    obs = pd.read_pickle("results/Dist-TMY3.pkl")
+    obs = pd.read_pickle("results/Dist-TMY2.pkl")
     target = obs[target_name]
     disturbance = obs[dist_name]
 
@@ -335,6 +335,15 @@ def main():
     cur_time = start_time
     print(cur_time)
     obs_dict = make_dict(obs_name, obs)
+
+    drop_keys = [
+        "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot",
+        "OA Temp.", "HVAC Power", "MA Mdot", "OA Mdot"
+    ]
+    for k in drop_keys:
+        del obs_dict[k]
+    obs_name_filter = list(obs_dict.keys())
+
     state = torch.tensor([obs_dict[name] for name in state_name]).unsqueeze(0).double() # 1 x n_state
 
     # Save for record
@@ -375,6 +384,14 @@ def main():
             timeStep, obs, isTerminal = env.step([SAT_stpt])
 
             obs_dict = make_dict(obs_name, obs)
+
+            drop_keys = [
+                "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot",
+                "OA Temp.", "HVAC Power", "MA Mdot", "OA Mdot"
+            ]
+            for k in drop_keys:
+                del obs_dict[k]
+
             cur_time = start_time + pd.Timedelta(seconds = timeStep)
             reward = R_func(obs_dict, action, eta)
 
@@ -420,7 +437,7 @@ def main():
         print("{}, reward: {}".format(cur_time, np.mean(real_rewards)))
 
         save_name = args.save_name
-        obs_df = pd.DataFrame(np.array(observations), index = np.array(timeStamp), columns = obs_name)
+        obs_df = pd.DataFrame(np.array(observations), index = np.array(timeStamp), columns = obs_name_filter)
         action_df = pd.DataFrame(np.array(actions_taken), index = np.array(timeStamp[:-1]), columns = ["Delta T", "Supply Air Temp. Setpoint"])
         obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
         action_df.to_pickle("results/perf_"+save_name+"_actions.pkl")
