@@ -31,11 +31,11 @@ from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
 import debugpy
 
 # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
-##debugpy.listen(("0.0.0.0",5678))
-##print("Waiting for debugger attach")
-##debugpy.wait_for_client()
-##debugpy.breakpoint()
-print('break on this line')
+#debugpy.listen(("0.0.0.0",5678))
+#print("Waiting for debugger attach")
+#debugpy.wait_for_client()
+#debugpy.breakpoint()
+#print('break on this line')
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -65,17 +65,17 @@ class PPO():
     def __init__(self, memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, clip_param = 0.1, F_hat = None, Bd_hat = None):
         self.memory = memory
         self.clip_param = clip_param
-        
+
         self.T = T
         self.step = args.step
         self.n_ctrl = n_ctrl
         self.n_state = n_state
         self.eta = eta
-        
+
         self.target = target
         self.dist = disturbance
         self.n_dist = self.dist.shape[1]
-        
+
         if F_hat is not None: # Load pre-trained F if provided
             print("Load pretrained F")
             self.F_hat = torch.tensor(F_hat).double().requires_grad_()
@@ -83,7 +83,7 @@ class PPO():
         else:
             self.F_hat = torch.ones((self.n_state, self.n_state+self.n_ctrl))
             self.F_hat = self.F_hat.double().requires_grad_()
-        
+
         if Bd_hat is not None:  # Load pre-trained Bd if provided
             print("Load pretrained Bd")
             self.Bd_hat = Bd_hat
@@ -91,15 +91,15 @@ class PPO():
             self.Bd_hat =  0.1 * np.random.rand(self.n_state, self.n_dist)
         self.Bd_hat = torch.tensor(self.Bd_hat).requires_grad_()
         print(self.Bd_hat)
-        
+
         self.Bd_hat_old = self.Bd_hat.detach().clone()
         self.F_hat_old = self.F_hat.detach().clone()
-        
+
         self.optimizer = optim.RMSprop([self.F_hat, self.Bd_hat], lr=args.lr)
-        
+
         self.u_lower = u_lower * torch.ones(n_ctrl).double()
         self.u_upper = u_upper * torch.ones(n_ctrl).double()
-    
+
     # Use the "current" flag to indicate which set of parameters to use
     def forward(self, x_init, ft, C, c, current = True, n_iters=20):
         T, n_batch, n_dist = ft.shape
@@ -109,7 +109,7 @@ class PPO():
         else:
             F_hat = self.F_hat_old
             Bd_hat = self.Bd_hat_old
- 
+
         x_lqr, u_lqr, objs_lqr = mpc.MPC(n_state=self.n_state,
                                          n_ctrl=self.n_ctrl,
                                          T=self.T,
@@ -144,7 +144,7 @@ class PPO():
         log_prob = dist.log_prob(actions.double())
         entropy = dist.entropy()
         return log_prob, entropy
-    
+
     def update_parameters(self, loader, sigma):
         for i in range(1):
             for states, actions, next_states, dist, advantage, old_log_probs, C, c in loader:
@@ -153,11 +153,11 @@ class PPO():
                 f = self.Dist_func(dist, current = True) # T-1 x n_batch x n_state
                 opt_states, opt_actions = self.forward(states, f, C.transpose(0, 1), c.transpose(0, 1), current = True) # x, u: T x N x Dim.
                 log_probs, entropies = self.evaluate_action(opt_actions[0], actions, sigma)
-        
+
                 tau = torch.cat([states, actions], 1) # n_batch x (n_state + n_ctrl)
                 nState_est = torch.bmm(self.F_hat.repeat(n_batch, 1, 1), tau.unsqueeze(-1)).squeeze(-1) + f[0] # n_batch x n_state
                 mse_loss = torch.mean((nState_est - next_states)**2)
-                
+
                 ratio = torch.exp(log_probs.squeeze()-old_log_probs)
                 surr1 = ratio * advantage
                 surr2 = torch.clamp(ratio, 1-self.clip_param, 1+self.clip_param) * advantage
@@ -166,7 +166,7 @@ class PPO():
                 loss.backward()
                 #nn.utils.clip_grad_norm_([self.F_hat, self.Bd_hat], 100)
                 self.optimizer.step()
-            
+
             self.F_hat_old = self.F_hat.detach().clone()
             self.Bd_hat_old = self.Bd_hat.detach().clone()
             print(self.F_hat)
@@ -189,12 +189,12 @@ class PPO():
         eta_w_flag = torch.tensor([self.eta[int(flag)] for flag in occupied]).unsqueeze(1).double() # Tx1
         diag[:, :self.n_state] = eta_w_flag
         diag[:, self.n_state:] = 1e-6
-        
+
         C = []
         for i in range(self.T):
             C.append(torch.diag(diag[i]))
         C = torch.stack(C).unsqueeze(1) # T x 1 x (m+n) x (m+n)
-        
+
         x_target = self.target[cur_time : cur_time + pd.Timedelta(seconds = (self.T-1) * self.step)] # in pd.Series
         x_target = torch.tensor(np.array(x_target))
 
@@ -206,20 +206,48 @@ class PPO():
         return C, c
 
 
+def next_path(path_pattern, n=0):
+    """
+    Finds the next free path in an sequentially named list of files
+
+    e.g. path_pattern = 'file-%s.txt':
+
+    file-1.txt
+    file-2.txt
+    file-3.txt
+
+    Runs in log(n) time where n is the number of existing files in sequence
+    """
+    i = 1
+
+    # First do an exponential search
+    while os.path.exists(path_pattern % i):
+        i = i * 2
+
+    # Result lies somewhere in the interval (i/2..i]
+    # We call this interval (a..b] and narrow it down until a + 1 = b
+    a, b = (i // 2, i)
+    while a + 1 < b:
+        c = (a + b) // 2  # interval midpoint
+        a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+
+    return path_pattern % (b-n)
+
+
 def main():
     # Create Simulation Environment
-    env = gym.make('5Zone-control_TMY3-v0')
+    env = gym.make('7Zone-control_TMY3-v0')
 
     # Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
     obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
 
     # Modify here: Change based on the specific control problem
     state_name = ["Indoor Temp."]
-    dist_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Occupancy Flag"]
+    dist_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Direct Solar Rad.", "Occupancy Flag"]
     # Caveat: The RL agent controls the difference between Supply Air Temp. and Mixed Air Temp., i.e. the amount of heating from the heating coil. But, the E+ expects Supply Air Temp. Setpoint.
     ctrl_name = ["SA Temp Setpoint"]
     target_name = ["Indoor Temp. Setpoint"]
-    
+
     n_state = len(state_name)
     n_ctrl = len(ctrl_name)
 
@@ -232,44 +260,53 @@ def main():
     u_lower = 0
 
     # Read Information on Weather, Occupancy, and Target Setpoint
-    obs = pd.read_pickle("results/Dist-TMY3.pkl")
+    obs = pd.read_pickle("results/Dist-TMY2.pkl")
     target = obs[target_name]
     disturbance = obs[dist_name]
-    
+
     # Min-Max Normalization
     disturbance = (disturbance - disturbance.min())/(disturbance.max() - disturbance.min())
 
     torch.manual_seed(args.seed)
     memory = Replay_Memory()
-    
+
     # From Imitation Learning
-    #epoch = 16
-    #F_hat = np.load("results/weights/F-{}.npy".format(epoch))
-    #Bd_hat = np.load("results/weights/Bd-{}.npy".format(epoch))
-    
+    epoch = 19
+    F_hat = np.load("results/weights/F-{}.npy".format(epoch))
+    Bd_hat = np.load("results/weights/Bd-{}.npy".format(epoch))
+
     ## After first round of training
-    F_hat = np.array([[0.9248, 0.1440]])
-    Bd_hat = np.array([[0.7404, 0.1490, 0.3049, 0.5458, 0.2676, 0.3085, 0.6900]])
+    #F_hat = np.array([[0.9248, 0.1440]])
+    #Bd_hat = np.array([[0.7404, 0.1490, 0.3049, 0.5458, 0.2676, 0.3085, 0.6900]])
     agent = PPO(memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, F_hat = F_hat, Bd_hat = Bd_hat)
 
     dir = 'results'
     if not os.path.exists(dir):
         os.mkdir(dir)
-    
+
     perf = []
     multiplier = 10 # Normalize the reward for better training performance
     n_step = 96 #timesteps per day
-    
+
     timeStep, obs, isTerminal = env.reset()
     start_time = pd.datetime(year = env.start_year, month = env.start_mon, day = env.start_day)
     cur_time = start_time
     print(cur_time)
     obs_dict = make_dict(obs_name, obs)
+
+    drop_keys = [
+    "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot", "OA Temp.",
+    "HVAC Power", "MA Mdot","OA Mdot"
+    ]
+    for k in drop_keys:
+        del obs_dict[k]
+    obs_name_filter = list(obs_dict.keys())
+
     state = torch.tensor([obs_dict[name] for name in state_name]).unsqueeze(0).double() # 1 x n_state
-    
+
     # Save for record
     timeStamp = [start_time]
-    observations = [obs]
+    observations = [list(obs_dict.values())]
     actions_taken = []
 
     for i_episode in range(tol_eps):
@@ -301,11 +338,19 @@ def main():
             if (obs_dict["Indoor Temp."]>obs_dict["Indoor Temp. Setpoint"]) & (obs_dict["Occupancy Flag"]==1):
                 SAT_stpt = obs_dict["Outdoor Temp."]
             timeStep, obs, isTerminal = env.step([SAT_stpt])
-            
+
             obs_dict = make_dict(obs_name, obs)
+
+            drop_keys = [
+                "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot", "OA Temp.",
+                "HVAC Power", "MA Mdot","OA Mdot"
+            ]
+            for k in drop_keys:
+                del obs_dict[k]
+
             cur_time = start_time + pd.Timedelta(seconds = timeStep)
             reward = R_func(obs_dict, action, eta)
-            
+
             # Per episode
             real_rewards.append(reward)
             rewards.append(reward.double() / multiplier)
@@ -316,10 +361,10 @@ def main():
             disturbance.append(dt)
             CC.append(C.squeeze())
             cc.append(c.squeeze())
-            
+
             # Save for record
             timeStamp.append(cur_time)
-            observations.append(obs)
+            observations.append(list(obs_dict.values()))
             actions_taken.append([action.item(), SAT_stpt])
             print("{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(cur_time,
                 action.item(), SAT_stpt, obs_dict["Sys Out Temp."], obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"], obs_dict["Occupancy Flag"], reward))
@@ -343,16 +388,24 @@ def main():
             batch_set = Dataset(batch_states, batch_actions, b_next_states, batch_dist, batch_rewards, batch_old_logprobs, batch_CC, batch_cc)
             batch_loader = data.DataLoader(batch_set, batch_size=48, shuffle=True, num_workers=2)
             agent.update_parameters(batch_loader, sigma)
-        
+
         perf.append([np.mean(real_rewards), np.std(real_rewards)])
         print("{}, reward: {}".format(cur_time, np.mean(real_rewards)))
 
         save_name = args.save_name
-        obs_df = pd.DataFrame(np.array(observations), index = np.array(timeStamp), columns = obs_name)
+        obs_df = pd.DataFrame(np.array(observations), index = np.array(timeStamp), columns = obs_name_filter)
         action_df = pd.DataFrame(np.array(actions_taken), index = np.array(timeStamp[:-1]), columns = ["Delta T", "Supply Air Temp. Setpoint"])
         obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
         action_df.to_pickle("results/perf_"+save_name+"_actions.pkl")
         pickle.dump(np.array(perf), open("results/perf_"+save_name+".npy", "wb"))
+
+        # Save weights
+        F_path = next_path("results/weights/ppo_F-%s.npy")
+        Bd_path = next_path("results/weights/ppo_Bd-%s.npy")
+        F_hat = agent.F_hat.detach().numpy()
+        Bd_hat = agent.Bd_hat.detach().numpy()
+        np.save(F_path, F_hat)
+        np.save(Bd_path, Bd_hat)
 
 if __name__ == '__main__':
     main()
