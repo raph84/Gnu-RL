@@ -3,9 +3,6 @@ import debugpy
 import os
 import sys
 
-import gym
-import eplus_env
-
 # Assign mpc_path to be the file path where mpc.torch is located.
 mpc_path = os.path.abspath(os.path.join(__file__,'..', '..'))
 sys.path.insert(0, mpc_path)
@@ -28,20 +25,18 @@ from torch.distributions import MultivariateNormal, Normal
 
 from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
 
-import debugpy
+from flask import Flask, url_for, request
+import json
 
-# 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
-#debugpy.listen(("0.0.0.0",5678))
-#print("Waiting for debugger attach")
-#debugpy.wait_for_client()
-#debugpy.breakpoint()
-#print('break on this line')
+
+app = Flask(__name__)
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
 
-parser = argparse.ArgumentParser(description='GruRL Demo: Online Learning')
+parser = argparse.ArgumentParser(description='GruRL Demo: Online Learning',
+                                 )
 parser.add_argument('--gamma', type=float, default=0.98, metavar='G',
                     help='discount factor (default: 0.98)')
 parser.add_argument('--seed', type=int, default=42, metavar='N',
@@ -58,7 +53,31 @@ parser.add_argument('--save_name', type=str, default='rl',
                     help='save name')
 parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
+parser.add_argument('--debug_ppo', type=bool, default=False,
+                    help='Activate debugpy')
+parser.add_argument('--api_mode', type=bool, default=False,
+                    help='Flask API')
+parser.add_argument('--total_eps', type=int, default=90,
+                    help='Total number of episode. Each episode is a natural day')
+parser.add_argument('--no-reload', type=bool, default=False,
+                    help='reload')
 args = parser.parse_args()
+
+if not args.api_mode:
+    import gym
+    import eplus_env
+
+if args.debug_ppo :
+    # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+    debugpy.listen(("127.0.0.1",5679))
+    print("Waiting for debugger attach")
+    if not args.api_mode:
+        print("Waiting for debugger attach")
+        debugpy.wait_for_client()
+        debugpy.breakpoint()
+        print('break on this line')
+
+env = None
 
 
 class PPO():
@@ -205,6 +224,64 @@ class PPO():
         c = c.unsqueeze(1) # T x 1 x (m+n)
         return C, c
 
+class Env:
+
+    timeStep = None
+    obs = None
+    isTerminal = None
+
+    start_year = None
+    start_mon = None
+    start_day = None
+
+    def __init__(self, start_year, start_mon, start_day):
+        self.start_year = start_year
+        self.start_mon = start_mon
+        self.start_day = start_day
+
+    def reset(self):
+        return self.timeStep, self.obs, self.isTerminal
+
+# Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
+obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
+
+# Modify here: Change based on the specific control problem
+state_name = ["Indoor Temp."]
+dist_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Occupancy Flag"]
+# Caveat: The RL agent controls the difference between Supply Air Temp. and Mixed Air Temp., i.e. the amount of heating from the heating coil. But, the E+ expects Supply Air Temp. Setpoint.
+ctrl_name = ["SA Temp Setpoint"]
+target_name = ["Indoor Temp. Setpoint"]
+
+@app.route('/mpc/', methods=['POST'])
+def mpc_api():
+    global env
+
+    request_json = request.get_json()
+    year = request_json['year']
+    month = request_json['month']
+    day = request_json['day']
+    env = Env(start_year=year, start_mon=month, start_day=day)
+
+    weather = request_json['weather']
+    print(json.dumps(request_json))
+    timeStamp = []
+    for x in weather:
+        timeStamp.append(x['dt'])
+        del x['dt']
+
+
+    dist_name = [
+        "Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction",
+        "Diff. Solar Rad.", "Direct Solar Rad.", "Indoor Temp. Setpoint",
+        "Occupancy Flag","Indoor Temp."
+    ]
+    variables = weather[0].keys()
+    obs_api = pd.DataFrame([[i[j] for j in variables] for i in weather], columns = variables, index=timeStamp)
+    env.obs = weather[0]
+    main()
+
+    return ('', 204)
+
 
 def next_path(path_pattern, n=0):
     """
@@ -235,8 +312,6 @@ def next_path(path_pattern, n=0):
 
 
 def main():
-    # Create Simulation Environment
-    env = gym.make('7Zone-control_TMY3-v0')
 
     # Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
     obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
@@ -248,13 +323,18 @@ def main():
     ctrl_name = ["SA Temp Setpoint"]
     target_name = ["Indoor Temp. Setpoint"]
 
+    if not args.api_mode:
+        # Create Simulation Environment
+        global env
+        env = gym.make('7Zone-control_TMY3-v0')
+
     n_state = len(state_name)
     n_ctrl = len(ctrl_name)
 
     eta = [0.1, args.eta] # eta: Weight for comfort during unoccupied and occupied mode
     step = args.step # step: Timestep; Unit in seconds
     T = args.T # T: Number of timesteps in the planning horizon
-    tol_eps = 90 # tol_eps: Total number of episodes; Each episode is a natural day
+    tol_eps =  args.total_eps # tol_eps: Total number of episodes; Each episode is a natural day
 
     u_upper = 5
     u_lower = 0
@@ -310,6 +390,7 @@ def main():
     actions_taken = []
 
     for i_episode in range(tol_eps):
+        print("Episode {} of {}".format(i_episode,tol_eps))
         log_probs = []
         rewards = []
         real_rewards = []
@@ -322,6 +403,7 @@ def main():
         sigma = 1 - 0.9*i_episode/tol_eps
 
         for t in range(n_step):
+            print("Step {} of {}".format(t,n_step))
             dt = np.array(agent.dist[cur_time : cur_time + pd.Timedelta(seconds = (agent.T-2) * agent.step)]) # T-1 x n_dist
             dt = torch.tensor(dt).transpose(0, 1) # n_dist x T-1
             ft = agent.Dist_func(dt) # T-1 x 1 x n_state
@@ -408,4 +490,8 @@ def main():
         np.save(Bd_path, Bd_hat)
 
 if __name__ == '__main__':
-    main()
+    if args.api_mode:
+        if __name__ == "__main__":
+            app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    else:
+        main()
