@@ -61,6 +61,8 @@ parser.add_argument('--total_eps', type=int, default=90,
                     help='Total number of episode. Each episode is a natural day')
 parser.add_argument('--no-reload', type=bool, default=False,
                     help='reload')
+parser.add_argument('--weights_imit', type=bool, default=True,
+                    help='reload')
 args = parser.parse_args()
 
 if not args.api_mode:
@@ -351,9 +353,17 @@ def main():
     memory = Replay_Memory()
 
     # From Imitation Learning
-    epoch = 19
-    F_hat = np.load("results/weights/F-{}.npy".format(epoch))
-    Bd_hat = np.load("results/weights/Bd-{}.npy".format(epoch))
+    if args.weights_imit:
+        epoch = 19
+        imit_F_path = next_path("results/weights/F-%s.npy",1)
+        imit_Bd_path = next_path("results/weights/Bd-%s.npy",1)
+        F_hat = np.load(imit_F_path)
+        Bd_hat = np.load(imit_BD_path)
+    else :
+        imit_F_path = next_path("results/weights/ppo_F-%s.npy", 1)
+        imit_Bd_path = next_path("results/weights/ppo_Bd-%s.npy", 1)
+        F_hat = np.load(imit_F_path)
+        Bd_hat = np.load(imit_BD_path)
 
     ## After first round of training
     #F_hat = np.array([[0.9248, 0.1440]])
