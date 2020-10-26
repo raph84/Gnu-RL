@@ -28,11 +28,11 @@ from torch.distributions import MultivariateNormal, Normal
 
 from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
 
-#from flask import Flask, url_for, request
-#import json
+from flask import Flask, url_for, request
+import json
 
 
-#app = Flask(__name__)
+app = Flask(__name__)
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -88,9 +88,6 @@ if args.debug_ppo :
         debugpy.wait_for_client()
         debugpy.breakpoint()
         print('break on this line')
-
-env = None
-
 
 class PPO():
     def __init__(self, memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, clip_param = 0.1, F_hat = None, Bd_hat = None):
@@ -292,9 +289,38 @@ def next_path(path_pattern, n=0):
     return path_pattern % (b-n)
 
 
-def main():
+@app.route('/mpc/', methods=['POST'])
+def mpc_api():
 
-    global env
+    request_json = request.get_json()
+    year = request_json['year']
+    month = request_json['month']
+    day = request_json['day']
+    env_api = Env(start_year=year, start_mon=month, start_day=day)
+
+    weather = request_json['weather']
+    print(json.dumps(request_json))
+    timeStamp = []
+    for x in weather:
+        timeStamp.append(x['dt'])
+        del x['dt']
+
+    obs_name = [
+        "Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction",
+        "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP",
+        "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag",
+        "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.",
+        "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"
+    ]
+    env_api.obs = [weather[0]."Outdoor Temp."]
+
+    env_api.obs = weather[0]
+    main(env=env_api)
+
+    return ('', 204)
+
+
+def main(env=None):
 
     # Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
     obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
@@ -306,7 +332,7 @@ def main():
     ctrl_name = ["SA Temp Setpoint"]
     target_name = ["Indoor Temp. Setpoint"]
 
-    if not args.api_mode:
+    if env is None:
         # Create Simulation Environment
         env = gym.make('7Zone-control_TMY3-v0')
 
