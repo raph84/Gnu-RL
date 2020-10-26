@@ -3,6 +3,9 @@ import debugpy
 import os
 import sys
 
+import gym
+import eplus_env
+
 # Assign mpc_path to be the file path where mpc.torch is located.
 mpc_path = os.path.abspath(os.path.join(__file__,'..', '..'))
 sys.path.insert(0, mpc_path)
@@ -25,18 +28,28 @@ from torch.distributions import MultivariateNormal, Normal
 
 from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset
 
-from flask import Flask, url_for, request
-import json
+#from flask import Flask, url_for, request
+#import json
 
 
-app = Flask(__name__)
+#app = Flask(__name__)
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
 
-parser = argparse.ArgumentParser(description='GruRL Demo: Online Learning',
-                                 )
+
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in {'false', 'f', '0', 'no', 'n'}:
+        return False
+    elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
+        return True
+    raise ValueError(f'{value} is not a valid boolean value')
+
+
+parser = argparse.ArgumentParser(description='GruRL Demo: Online Learning')
 parser.add_argument('--gamma', type=float, default=0.98, metavar='G',
                     help='discount factor (default: 0.98)')
 parser.add_argument('--seed', type=int, default=42, metavar='N',
@@ -53,21 +66,18 @@ parser.add_argument('--save_name', type=str, default='rl',
                     help='save name')
 parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
-parser.add_argument('--debug_ppo', type=bool, default=False,
+parser.add_argument('--debug_ppo', type=str_to_bool, nargs='?', const=True, default=False,
                     help='Activate debugpy')
-parser.add_argument('--api_mode', type=bool, default=False,
+parser.add_argument('--api_mode', type=str_to_bool, nargs='?', const=True, default=False,
                     help='Flask API')
 parser.add_argument('--total_eps', type=int, default=90,
                     help='Total number of episode. Each episode is a natural day')
-parser.add_argument('--no-reload', type=bool, default=False,
+parser.add_argument('--no-reload', type=str_to_bool, nargs='?', const=True, default=False,
                     help='reload')
-parser.add_argument('--weights_imit', type=bool, default=True,
-                    help='reload')
+parser.add_argument('--weights_imit', type=str_to_bool, nargs='?', const=True, default=True,
+                    help='Use weights saved from imitation learning')
 args = parser.parse_args()
 
-if not args.api_mode:
-    import gym
-    import eplus_env
 
 if args.debug_ppo :
     # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
@@ -254,37 +264,6 @@ dist_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Dif
 ctrl_name = ["SA Temp Setpoint"]
 target_name = ["Indoor Temp. Setpoint"]
 
-@app.route('/mpc/', methods=['POST'])
-def mpc_api():
-    global env
-
-    request_json = request.get_json()
-    year = request_json['year']
-    month = request_json['month']
-    day = request_json['day']
-    env = Env(start_year=year, start_mon=month, start_day=day)
-
-    weather = request_json['weather']
-    print(json.dumps(request_json))
-    timeStamp = []
-    for x in weather:
-        timeStamp.append(x['dt'])
-        del x['dt']
-
-
-    dist_name = [
-        "Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction",
-        "Diff. Solar Rad.", "Direct Solar Rad.", "Indoor Temp. Setpoint",
-        "Occupancy Flag","Indoor Temp."
-    ]
-    variables = weather[0].keys()
-    obs_api = pd.DataFrame([[i[j] for j in variables] for i in weather], columns = variables, index=timeStamp)
-    env.obs = weather[0]
-    main()
-
-    return ('', 204)
-
-
 def next_path(path_pattern, n=0):
     """
     Finds the next free path in an sequentially named list of files
@@ -315,6 +294,8 @@ def next_path(path_pattern, n=0):
 
 def main():
 
+    global env
+
     # Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
     obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
 
@@ -327,7 +308,6 @@ def main():
 
     if not args.api_mode:
         # Create Simulation Environment
-        global env
         env = gym.make('7Zone-control_TMY3-v0')
 
     n_state = len(state_name)
@@ -352,18 +332,23 @@ def main():
     torch.manual_seed(args.seed)
     memory = Replay_Memory()
 
+
     # From Imitation Learning
     if args.weights_imit:
+        print("Loading weights from Imitation learning.")
         epoch = 19
         imit_F_path = next_path("results/weights/F-%s.npy",1)
         imit_Bd_path = next_path("results/weights/Bd-%s.npy",1)
         F_hat = np.load(imit_F_path)
-        Bd_hat = np.load(imit_BD_path)
-    else :
+        Bd_hat = np.load(imit_Bd_path)
+    else:
+        print("Loading weights from last PPO execution.")
         imit_F_path = next_path("results/weights/ppo_F-%s.npy", 1)
         imit_Bd_path = next_path("results/weights/ppo_Bd-%s.npy", 1)
+        print("F path : {}".format(imit_F_path))
+        print("Bd path : {}".format(imit_Bd_path))
         F_hat = np.load(imit_F_path)
-        Bd_hat = np.load(imit_BD_path)
+        Bd_hat = np.load(imit_Bd_path)
 
     ## After first round of training
     #F_hat = np.array([[0.9248, 0.1440]])
