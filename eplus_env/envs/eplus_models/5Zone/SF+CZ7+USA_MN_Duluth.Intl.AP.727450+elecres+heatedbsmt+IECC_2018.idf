@@ -731,6 +731,8 @@ SurfaceConvectionAlgorithm:Inside,
 Timestep,
     4;                       !- Number of Timesteps per Hour
 
+HeatBalanceAlgorithm,ConductionTransferFunction;
+
 !-   ===========  ALL OBJECTS IN CLASS: SITE:LOCATION ===========
 
 ! Weather_file = USA_MN_Duluth.Intl.AP.727450_TMY3.epw;
@@ -818,12 +820,12 @@ SizingPeriod:DesignDay,
 !-   ===========  ALL OBJECTS IN CLASS: RUNPERIOD ===========
 
 RunPeriod,
-    annual,                  !- Name
+    ,                        !- Name
     1,                       !- Begin Month
     1,                       !- Begin Day of Month
-    12,                      !- End Month
-    31,                      !- End Day of Month
-    UseWeatherFile,          !- Day of Week for Start Day
+    4,                       !- End Month
+    1,                       !- End Day of Month
+    Monday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
     Yes,                     !- Use Weather File Daylight Saving Period
     No,                      !- Apply Weekend Holiday Rule
@@ -2257,7 +2259,8 @@ Drywall_1/2in;
 !Initial revision
 !
 
-!- Some material properties updated using NREL Benchmark model. Some other materials added directly from the benchmark model.
+
+!- Some material properties updated using NREL Benchmark model. Some other materials added directly from the benchmark model.
 
 
 

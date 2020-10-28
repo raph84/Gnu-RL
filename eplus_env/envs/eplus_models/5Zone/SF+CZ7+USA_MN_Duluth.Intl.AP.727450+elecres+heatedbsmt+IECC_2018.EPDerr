@@ -1,0 +1,6 @@
+Program Version,EPDraw, Version 3.0
+   ************* Energy+.idd used=C:\EnergyPlusV8-7-0\Energy+.idd
+   ** Warning ** The total number of floors, walls, roofs and internal mass surfaces in Zone ATTIC_UNIT1
+   **   ~~~   ** is < 6. This may cause an inaccurate zone heat balance calculation.
+   ** Warning ** DXFOut: Using triangulate, action=TRIANGULATE 3DFACE
+   ************* EPDraw Completed Successfully-- 2 Warning; 0 Severe Errors
