@@ -44,11 +44,11 @@ RUN cd / && \
         virtualenv virt_env --python=python3 && \
         /bin/bash -c "source /virt_env/bin/activate && \
                         pip3 install gym && \
-                        pip3 install -e /Gym-Eplus/ && \
                         cd /Gnu-RL && \
                         pip3 install -r requirements.txt && \
                         cd /Gnu-RL/eplus_env && \
                         cp -R * /Gym-Eplus/eplus_env/ && \
+                        pip3 install -e /Gym-Eplus/ && \
                         pip3 install matplotlib && \
                         pip3 install --upgrade debugpy && \
                         pip3 install jupyterlab"
