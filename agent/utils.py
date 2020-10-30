@@ -10,13 +10,13 @@ def make_dict(obs_name, obs):
 def R_func(obs_dict, action, eta):
     reward = - 0.5 * eta[int(obs_dict["Occupancy Flag"])] * (obs_dict["Indoor Temp."] - obs_dict["Indoor Temp. Setpoint"])**2 - action
     return reward#.item()
-    
+
 # Calculate the advantage estimate
 def Advantage_func(rewards, gamma):
     R = torch.zeros(1, 1).double()
     T = len(rewards)
     advantage = torch.zeros((T,1)).double()
-    
+
     for i in reversed(range(len(rewards))):
         R = gamma * R + rewards[i]
         advantage[i] = R
@@ -38,7 +38,7 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
         return self.states[index], self.actions[index], self.next_states[index], self.disturbance[index], self.rewards[index], self.old_logprobs[index], self.CC[index], self.cc[index]
-    
+
 class Replay_Memory():
     def __init__(self, memory_size=10):
         self.memory_size = memory_size
@@ -85,7 +85,7 @@ class Replay_Memory():
         self.CC.append(CC)
         self.cc.append(cc)
         self.len += 1
-        
+
         if self.len > self.memory_size:
             self.len = self.memory_size
             self.rewards = self.rewards[-self.memory_size:]
@@ -97,3 +97,49 @@ class Replay_Memory():
             self.CC = self.CC[-self.memory_size:]
             self.cc = self.cc[-self.memory_size:]
 
+
+def next_path(path_pattern, n=0):
+    """
+    Finds the next free path in an sequentially named list of files
+
+    e.g. path_pattern = 'file-%s.txt':
+
+    file-1.txt
+    file-2.txt
+    file-3.txt
+
+    Runs in log(n) time where n is the number of existing files in sequence
+    """
+    i = 1
+
+    # First do an exponential search
+    while os.path.exists(path_pattern % i):
+        i = i * 2
+
+    # Result lies somewhere in the interval (i/2..i]
+    # We call this interval (a..b] and narrow it down until a + 1 = b
+    a, b = (i // 2, i)
+    while a + 1 < b:
+        c = (a + b) // 2  # interval midpoint
+        a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+
+    return path_pattern % (b - n)
+
+
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in {'false', 'f', '0', 'no', 'n'}:
+        return False
+    elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
+        return True
+    raise ValueError(f'{value} is not a valid boolean value')
+
+
+def drop_keys(obs_dict):
+    drop_keys = [
+        "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot",
+        "OA Temp.", "HVAC Power", "MA Mdot", "OA Mdot"
+    ]
+    for k in drop_keys:
+        del obs_dict[k]
