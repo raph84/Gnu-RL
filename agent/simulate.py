@@ -20,7 +20,7 @@ timeStep, obs, isTerminal = env.reset();
 obs_dict = make_dict(obs_name, obs)
 drop_keys = [
     "Diff. Solar Rad.", "Clg SP", "Sys In Temp.", "Sys In Mdot", "OA Temp.",
-    "HVAC Power", "MA Mdot","OA Mdot"
+    "HVAC Power", "MA Mdot", "OA Mdot", "Sys Out Mdot"
 ]
 for k in drop_keys:
     del obs_dict[k]
@@ -42,8 +42,8 @@ for i in range(91*96):
         del obs_dict[k]
     cur_time = start_time + pd.Timedelta(seconds = timeStep)
 
-    print("{}: Sys Out: {:.2f}({:.2f})-> Zone Temp: {:.2f} | MA Temp: {:.2f}".
-          format(cur_time, obs_dict["Sys Out Temp."], obs_dict["Sys Out Mdot"],
+    print("{}: Sys Out: {:.2f}(...)-> Zone Temp: {:.2f} | MA Temp: {:.2f}".
+          format(cur_time, obs_dict["Sys Out Temp."], 
                  obs_dict["Indoor Temp."], obs_dict["MA Temp."]))
 
     timeStamp.append(cur_time)

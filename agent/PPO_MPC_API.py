@@ -4,6 +4,7 @@ import copy
 import pickle
 from datetime import datetime
 import math
+import warnings
 
 import torch
 import torch.nn as nn
@@ -43,6 +44,32 @@ parser.add_argument('--eta', type=int, default=4,
 
 
 class PPO(nn.Module):
+    class P():
+        self.observations = [] ##
+        self.actions_taken = [] ##
+
+        self.actions = [] #
+        self.states = [] #
+
+        self.start_time = None
+        self.timestamp = [] ##
+
+        self.perf = [] ##
+
+        self.rewards = [] #
+        self.real_rewards = [] #
+
+        self.old_log_probs = [] #
+
+        self.disturbances = [] #
+
+        self.CC = [] #
+        self.cc = [] #
+
+        def __init__(self):
+            if self.start_time = None:
+                self.start_time = datetime.now()
+
     def __init__(self,
                  memory,
                  T,
@@ -58,6 +85,8 @@ class PPO(nn.Module):
                  Bd_hat=None):
 
         super(PPO, self).__init__()
+
+        self.p = P()
 
         self.memory = memory
         self.clip_param = clip_param
@@ -95,6 +124,7 @@ class PPO(nn.Module):
 
         self.u_lower = u_lower * torch.ones(n_ctrl).double()
         self.u_upper = u_upper * torch.ones(n_ctrl).double()
+
 
     # Use the "current" flag to indicate which set of parameters to use
     def forward(self, x_init, ft, C, c, current=True, n_iters=20):
@@ -244,7 +274,7 @@ def main():
     u_lower = 0
 
 
-    # TODO : TARGET
+    # TODO : TARGET stpt
     target = None
     # TODO : DISTURBANCE ; In relation to obs below?
     disturbance = None
@@ -253,9 +283,11 @@ def main():
     if not os.path.exists(dir):
         os.mkdir(dir)
 
-    perf = []
     multiplier = 10  # Normalize the reward for better training performance
     n_step = 96  #timesteps per day
+
+
+    
 
 
     agent = torch.load('torch_model.pth')
@@ -263,53 +295,93 @@ def main():
 
     
 
-    # TODO : Date from API request
-    start_time = pd.datetime(year=2020,
-                             month=10,
-                             day=29)
-    cur_time = start_time
 
     # TODO : ==== Values from API request ====
     obs_dict = None
-    observations.append([list(obs_dict.values())])
-
-    # TODO : if there is a previous observation, calculate the reward
-    reward = R_func(obs_dict, action, eta)
-    real_rewards.append(reward)
-    rewards.append(reward.double() / multiplier)
     
-    
+    # TODO : Date from API request
+    cur_time = pd.datetime(year=2020,
+                             month=10,
+                             day=29)
     
 
+    # 96 timesteps per day; which timestep are we?
+    step = args.step  # 900 seconds per step
+    # TODO : Replace NOW by date from API request
+    now = datetime.now()
+    seconds_since_midnight = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+    t = math.floor(seconds_since_midnight / step)
+    print("Step {} of {}".format(t,n_step))
 
-    # TODO : move this into agent to persist for the day between runs
-    observations = []
-    actions_taken = []
-    actions = []
-    states = []
-
-    # TODO : new day? Update model and reset history arrays
-
-
-    state = torch.tensor([obs_dict[name] for name in state_name])
-                                                .unsqueeze(0).double()  # 1 x n_state
-    states.append(state)
-
-    timeStamp = [start_time]
-    
 
     # One action at a time for the current day
     i_episode = 0 
     tol_eps = 1
     sigma = 1 - 0.9*i_episode/tol_eps
 
-    # 96 timesteps per day; as which timestep are we?
-    step = args.step  # 900 seconds per step
-    now = datetime.now()
-    seconds_since_midnight = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-    t = math.floor(seconds_since_midnight / step)
-    print("Step {} of {}".format(t,n_step))
 
+    # If we have 2 observations or more, calculate the reward.
+    if len(self.p.observations) > 1:
+        reward = R_func(obs_dict, action, eta)
+        agent.p.real_rewards.append(reward)
+        agent.p.rewards.append(reward.double() / multiplier)
+    else:
+        reward = None
+
+
+    # New day? Update model and reset history arrays
+    # TODO : don't rely on NOW. Use date from API request
+    if agent.p.start_time.day != now.day:
+
+        print("==== Begining new day - Update model - Reset agent ====")
+
+        # Torch variables to append to agent memory
+        advantages = Advantage_func(agent.p.rewards, args.gamma)
+        old_log_probs = torch.stack(agent.p.old_log_probs).squeeze().detach().clone()
+        next_states = torch.stack(agent.p.states[1:]).squeeze(1)
+        states = torch.stack(agent.p.states[:-1]).squeeze(1)
+        actions = torch.stack(agent.p.actions).squeeze(1).detach().clone()
+        CC = torch.stack(agent.p.CC).squeeze() # n_batch x T x (m+n) x (m+n)
+        cc = torch.stack(agent.p.cc).squeeze() # n_batch x T x (m+n)
+        disturbance = torch.stack(agent.p.disturbances) # n_batch x T x n_dist
+        agent.memory.append(states, actions, next_states, advantages, old_log_probs, disturbance, CC, cc)
+
+        if (agent.memory.len>= 1):
+            batch_states, batch_actions, b_next_states, batch_dist, batch_rewards, batch_old_logprobs, batch_CC, batch_cc = agent.memory.sample_batch(args.update_episode)
+            batch_set = Dataset(batch_states, batch_actions, b_next_states, batch_dist, batch_rewards, batch_old_logprobs, batch_CC, batch_cc)
+            batch_loader = data.DataLoader(batch_set, batch_size=48, shuffle=True, num_workers=2)
+            agent.update_parameters(batch_loader, sigma)
+        else:
+            warnings.warn("agent.memory.len should be greater than 0.")
+
+        agent.p.perf.append([np.mean(agent.p.real_rewards), np.std(agent.p.real_rewards)])
+        print("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
+
+        save_name = agent.p.timestamp.strftime("%Y%m%d_") + args.save_name
+        obs_df = pd.DataFrame(np.array(agent.p.observations), index = np.array(timeStamp), columns = obs_name_filter)
+        action_df = pd.DataFrame(np.array(agent.p.actions_taken), index = np.array(timeStamp[:-1]), columns = ["Delta T", "Supply Air Temp. Setpoint"])
+        obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
+        action_df.to_pickle("results/perf_"+save_name+"_actions.pkl")
+        pickle.dump(np.array(perf), open("results/perf_"+save_name+".npy", "wb"))
+
+        # Save weights
+        F_path = next_path("results/weights/ppo_F-%s.npy")
+        Bd_path = next_path("results/weights/ppo_Bd-%s.npy")
+        F_hat = agent.F_hat.detach().numpy()
+        Bd_hat = agent.Bd_hat.detach().numpy()
+        np.save(F_path, F_hat)
+        np.save(Bd_path, Bd_hat)
+
+        agent.p = PPO.P()
+
+
+
+    agent.p.observations.append([list(obs_dict.values())])
+    agent.p.timestamp.append(cur_time)
+    
+    state = torch.tensor([obs_dict[name] for name in state_name]).unsqueeze(0).double()
+    agent.p.states.append(state)
+    
     # TODO : review dt content
     dt = np.array(agent.dist[cur_time : cur_time + pd.Timedelta(seconds = (agent.T-2) * agent.step)]) # T-1 x n_dist
     dt = torch.tensor(dt).transpose(0, 1) # n_dist x T-1
@@ -317,19 +389,28 @@ def main():
     C, c = agent.Cost_function(cur_time)
     opt_states, opt_actions = agent.forward(state, ft, C, c, current = False) # x, u: T x 1 x Dim.
     action, old_log_prob = agent.select_action(opt_actions[0], sigma)
-    old_log_probs.append(old_log_prob)
-    disturbance.append(dt)
-    CC.append(C.squeeze())
-    cc.append(c.squeeze())
+
+    agent.p.old_log_probs.append(agent.p.old_log_prob)
+    agent.p.disturbances.append(dt)
+    agent.p.CC.append(C.squeeze())
+    agent.p.cc.append(c.squeeze())
 
     # ==== Current action result ====
     SAT_stpt = max(0, action.item())
     if action.item()<0:
         action = torch.zeros_like(action)
-    actions.append(action)
-    actions_taken.append([action.item(), SAT_stpt])
+    agent.p.actions.append(action)
+    agent.p.actions_taken.append([action.item(), SAT_stpt])
     
     print("{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(cur_time,
                 action.item(), SAT_stpt, obs_dict["Sys Out Temp."], obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"], obs_dict["Occupancy Flag"], reward))
     # if
 
+    print("Saving agent...")
+    torch.save(agent, 'torch_model.pth')
+
+
+
+
+if __name__ == "__main__":
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
