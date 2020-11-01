@@ -28,8 +28,7 @@ RUN apt-get install -y vim && \
 
 # Git clone Gnu-RL in the Volume
 RUN cd / && git clone https://github.com/zhangzhizza/Gym-Eplus.git
-RUN cd / && git clone --single-branch --branch gnu-rl-svc https://github.com/INFERLab/Gnu-RL.git
-
+RUN cd / && git clone --single-branch --branch gnu-rl-svc https://github.com/raph84/Gnu-RL.git
 # EnergyPlus runtime is a dependancy of Gym-Eplus.
 RUN apt-get install -y wget && \
        cd /Gym-Eplus/ && \
