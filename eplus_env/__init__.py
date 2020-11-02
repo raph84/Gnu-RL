@@ -63,17 +63,6 @@ register(
          });
 
 register(
-         id='7Zone-sim_TMYx-v0',
-         entry_point='eplus_env.envs:EplusEnv',
-         kwargs={'eplus_path':FD + '/envs/EnergyPlus-8-6-0/', # The EnergyPlus software path
-         'weather_path':FD + '/envs/weather/CAN_QC_Mont.Joli.AP.717180_TMYx.2004-2018.epw', # The epw weather file
-         'bcvtb_path':FD + '/envs/bcvtb/', # The BCVTB path
-         'variable_path':FD + '/envs/eplus_models/5Zone/variables_Default.cfg', # The cfg file
-         'idf_path':FD + '/envs/eplus_models/5Zone/5Zone_Default.idf', # The idf file
-         'env_name': '5Zone-sim-v0',
-         });
-
-register(
          id='7Zone-control_TMYx-v0',
          entry_point='eplus_env.envs:EplusEnv',
          kwargs={'eplus_path':FD + '/envs/EnergyPlus-8-6-0/', # The EnergyPlus software path
