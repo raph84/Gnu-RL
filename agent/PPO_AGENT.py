@@ -57,7 +57,9 @@ class PPO(nn.Module):
                  u_lower,
                  clip_param=0.1,
                  F_hat=None,
-                 Bd_hat=None):
+                 Bd_hat=None,
+                 step,
+                 lr):
 
         super(PPO, self).__init__()
 
@@ -67,7 +69,7 @@ class PPO(nn.Module):
         self.clip_param = clip_param
 
         self.T = T
-        self.step = args.step
+        self.step = step
         self.n_ctrl = n_ctrl
         self.n_state = n_state
         self.eta = eta
@@ -95,7 +97,7 @@ class PPO(nn.Module):
         self.Bd_hat_old = self.Bd_hat.detach().clone()
         self.F_hat_old = self.F_hat.detach().clone()
 
-        self.optimizer = optim.RMSprop([self.F_hat, self.Bd_hat], lr=args.lr)
+        self.optimizer = optim.RMSprop([self.F_hat, self.Bd_hat], lr=lr)
 
         self.u_lower = u_lower * torch.ones(n_ctrl).double()
         self.u_upper = u_upper * torch.ones(n_ctrl).double()

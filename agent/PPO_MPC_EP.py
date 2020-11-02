@@ -80,7 +80,7 @@ parser.add_argument('--weights_imit', type=str_to_bool, nargs='?', const=True, d
                     help='Use weights saved from imitation learning')
 args = parser.parse_args()
 
-    
+
 
 if args.debug_ppo :
     # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
@@ -239,7 +239,19 @@ def main(env=None):
     ## After first round of training
     #F_hat = np.array([[0.9248, 0.1440]])
     #Bd_hat = np.array([[0.7404, 0.1490, 0.3049, 0.5458, 0.2676, 0.3085, 0.6900]])
-    agent = PPO(memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, F_hat = F_hat, Bd_hat = Bd_hat)
+    agent = PPO(memory,
+                T,
+                n_ctrl,
+                n_state,
+                target,
+                disturbance,
+                eta,
+                u_upper,
+                u_lower,
+                F_hat=F_hat,
+                Bd_hat=Bd_hat,
+                args.step,
+                args.lr)
 
     dir = 'results'
     if not os.path.exists(dir):
