@@ -78,7 +78,6 @@ parser.add_argument('--weights_imit', type=str_to_bool, nargs='?', const=True, d
                     help='Use weights saved from imitation learning')
 args = parser.parse_args()
 
-if(not args.api_mode):
     
 
 if args.debug_ppo :
@@ -92,37 +91,39 @@ if args.debug_ppo :
         print('break on this line')
 
 class PPO(nn.Module):
+
     class P():
-        self.observations = [] ##
-        self.actions_taken = [] ##
-
-        self.actions = [] #
-        self.states = [] #
-
-        self.start_time = None
-        self.timestamp = [] ##
-
-        self.perf = [] ##
-
-        self.rewards = [] #
-        self.real_rewards = [] #
-
-        self.old_log_probs = [] #
-
-        self.disturbances = [] #
-
-        self.CC = [] #
-        self.cc = [] #
 
         def __init__(self):
-            if self.start_time = None:
-                self.start_time = datetime.now()
+            #if self.start_time == None:
+            #    self.start_time = datetime.now()
+            
+            self.observations = [] ##
+            self.actions_taken = [] ##
+
+            self.actions = [] #
+            self.states = [] #
+
+            self.start_time = None
+            self.timestamp = [] ##
+
+            self.perf = [] ##
+
+            self.rewards = [] #
+            self.real_rewards = [] #
+
+            self.old_log_probs = [] #
+
+            self.disturbances = [] #
+
+            self.CC = [] #
+            self.cc = [] #
 
     def __init__(self, memory, T, n_ctrl, n_state, target, disturbance, eta, u_upper, u_lower, clip_param = 0.1, F_hat = None, Bd_hat = None):
 
         super(PPO, self).__init__()
 
-        self.p = P()
+        self.p = self.P()
 
         self.memory = memory
         self.clip_param = clip_param
@@ -160,6 +161,10 @@ class PPO(nn.Module):
 
         self.u_lower = u_lower * torch.ones(n_ctrl).double()
         self.u_upper = u_upper * torch.ones(n_ctrl).double()
+
+    
+
+        
 
     # Use the "current" flag to indicate which set of parameters to use
     def forward(self, x_init, ft, C, c, current = True, n_iters=20):
