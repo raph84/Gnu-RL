@@ -250,8 +250,8 @@ def main(env=None):
                 u_lower,
                 F_hat=F_hat,
                 Bd_hat=Bd_hat,
-                args.step,
-                args.lr)
+                step=args.step,
+                lr=args.lr)
 
     dir = 'results'
     if not os.path.exists(dir):

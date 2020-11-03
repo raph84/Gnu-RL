@@ -1,6 +1,9 @@
 import os
 import sys
 
+import numpy as np
+import pandas as pd
+
 # Assign mpc_path to be the file path where mpc.torch is located.
 mpc_path = os.path.abspath(os.path.join(__file__, '..', '..'))
 sys.path.insert(0, mpc_path)
@@ -58,8 +61,8 @@ class PPO(nn.Module):
                  clip_param=0.1,
                  F_hat=None,
                  Bd_hat=None,
-                 step,
-                 lr):
+                 step=900,
+                 lr=5e-4):
 
         super(PPO, self).__init__()
 
