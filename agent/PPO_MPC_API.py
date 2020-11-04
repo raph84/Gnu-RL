@@ -15,6 +15,8 @@ import torch
 from flask import Flask, url_for, request
 import json
 
+from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset, next_path, str_to_bool, drop_keys
+
 from PPO_AGENT import PPO
 
 app = Flask(__name__)
@@ -42,11 +44,11 @@ parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
 parser.add_argument('--eps', type=int, default=90,
                     help='Total number of episode. Each episode is a natural day')
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 
 # Modify here: Outputs from EnergyPlus; Match the variables.cfg file.
-obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Diff. Solar Rad.", "Direct Solar Rad.", "Htg SP", "Clg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "HVAC Power", "Sys In Temp.", "Sys In Mdot", "OA Temp.", "OA Mdot", "MA Temp.", "MA Mdot", "Sys Out Temp.", "Sys Out Mdot"]
+obs_name = ["Outdoor Temp.", "Outdoor RH", "Wind Speed", "Wind Direction", "Direct Solar Rad.", "Htg SP", "Indoor Temp.", "Indoor Temp. Setpoint", "PPD", "Occupancy Flag", "Coil Power", "MA Temp.", "Sys Out Temp."]
 
 # Modify here: Change based on the specific control problem
 state_name = ["Indoor Temp."]
@@ -66,29 +68,39 @@ tol_eps =  args.eps # tol_eps: Total number of episodes; Each episode is a natur
 u_upper = 5
 u_lower = 0
 
-
+agent = None
 
 def initialize():
 
+    global agent
+
     print("Initializing agent...")
-
-
-
     agent = torch.load('torch_model.pth')
     agent.eval()
+    if agent.p.start_time == None:
+        agent.p.start_time = datetime.now()
 
+@app.route('/mpc/', methods=['POST'])
+def mpc_api():
 
+    req = request.get_json()
+    date_request = datetime.strptime(req['date'], '%Y-%m-%d %H:%M:%S')
+    #target = [req['disturbances'][0][k] for k in target_name]
 
-
-def main():
-
-
-
-
-    # TODO : TARGET stpt
-    target = None
     # TODO : DISTURBANCE ; In relation to obs below?
-    disturbance = None
+    d_ = copy.deepcopy(req['disturbances'])
+    dist_time = []
+    for d in d_:
+        dist_time.append(datetime.strptime(d['dt'], '%Y-%m-%d %H:%M:%S'))
+        for k in list(d.keys()):
+            if k not in dist_name:
+                del d[k]
+
+    disturbance = pd.DataFrame(d_, index=dist_time)
+    target = pd.DataFrame(req['disturbances'], index=dist_time)[target_name]
+    agent.dist = disturbance
+    agent.n_dist = agent.dist.shape[1]
+    agent.target = target
 
     dir = 'results'
     if not os.path.exists(dir):
@@ -103,19 +115,15 @@ def main():
 
 
     # TODO : ==== Values from API request ====
-    obs_dict = None
+    obs_dict = {k: req['disturbances'][0][k] for k in obs_name}
 
     # TODO : Date from API request
-    cur_time = pd.datetime(year=2020,
-                             month=10,
-                             day=29)
+    cur_time = pd.datetime(year = date_request.year, month = date_request.month, day = date_request.day)
 
 
     # 96 timesteps per day; which timestep are we?
     step = args.step  # 900 seconds per step
-    # TODO : Replace NOW by date from API request
-    now = datetime.now()
-    seconds_since_midnight = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+    seconds_since_midnight = (date_request - date_request.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
     t = math.floor(seconds_since_midnight / step)
     print("Step {} of {}".format(t,n_step))
 
@@ -126,18 +134,9 @@ def main():
     sigma = 1 - 0.9*i_episode/tol_eps
 
 
-    # If we have 2 observations or more, calculate the reward.
-    if len(self.p.observations) > 1:
-        reward = R_func(obs_dict, action, eta)
-        agent.p.real_rewards.append(reward)
-        agent.p.rewards.append(reward.double() / multiplier)
-    else:
-        reward = None
-
-
     # New day? Update model and reset history arrays
     # TODO : don't rely on NOW. Use date from API request
-    if agent.p.start_time.day != now.day:
+    if agent.p.start_time.day != date_request.day:
 
         print("==== Begining new day - Update model - Reset agent ====")
 
@@ -201,12 +200,22 @@ def main():
     agent.p.CC.append(C.squeeze())
     agent.p.cc.append(c.squeeze())
 
+
     # ==== Current action result ====
     SAT_stpt = max(0, action.item())
     if action.item()<0:
         action = torch.zeros_like(action)
     agent.p.actions.append(action)
     agent.p.actions_taken.append([action.item(), SAT_stpt])
+
+
+    # If we have 2 observations or more, calculate the reward.
+    if len(self.p.observations) > 1:
+        reward = R_func(obs_dict, action, eta)
+        agent.p.real_rewards.append(reward)
+        agent.p.rewards.append(reward.double() / multiplier)
+    else:
+        reward = None
 
     print("{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(cur_time,
                 action.item(), SAT_stpt, obs_dict["Sys Out Temp."], obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"], obs_dict["Occupancy Flag"], reward))
@@ -220,4 +229,4 @@ initialize()
 
 if __name__ == "__main__":
     print("Loading Flask API...")
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))

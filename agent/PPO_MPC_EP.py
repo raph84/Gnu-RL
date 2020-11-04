@@ -78,7 +78,7 @@ parser.add_argument('--no-reload', type=str_to_bool, nargs='?', const=True, defa
                     help='reload')
 parser.add_argument('--weights_imit', type=str_to_bool, nargs='?', const=True, default=True,
                     help='Use weights saved from imitation learning')
-args = parser.parse_args()
+args = parser.parse_known_args()
 
 
 
