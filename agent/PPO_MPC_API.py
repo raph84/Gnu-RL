@@ -44,6 +44,8 @@ parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
 parser.add_argument('--eps', type=int, default=90,
                     help='Total number of episode. Each episode is a natural day')
+parser.add_argument('--save_agent', type=bool, default=False, const=True, nargs="?",
+                    help='Save updates of the agent.')
 args, unknown = parser.parse_known_args()
 
 
@@ -84,6 +86,7 @@ def initialize():
 def mpc_api():
 
     req = request.get_json()
+    pickle.dump(req, open(next_path("results/req-%s.p"), "wb"))
     date_request = datetime.strptime(req['date'], '%Y-%m-%d %H:%M:%S')
     #target = [req['disturbances'][0][k] for k in target_name]
 
@@ -195,7 +198,7 @@ def mpc_api():
     opt_states, opt_actions = agent.forward(state, ft, C, c, current = False) # x, u: T x 1 x Dim.
     action, old_log_prob = agent.select_action(opt_actions[0], sigma)
 
-    agent.p.old_log_probs.append(agent.p.old_log_prob)
+    agent.p.old_log_probs.append(old_log_prob)
     agent.p.disturbances.append(dt)
     agent.p.CC.append(C.squeeze())
     agent.p.cc.append(c.squeeze())
@@ -207,10 +210,10 @@ def mpc_api():
         action = torch.zeros_like(action)
     agent.p.actions.append(action)
     agent.p.actions_taken.append([action.item(), SAT_stpt])
-
+    print("New indoor set point : {}".format(SAT_stpt))
 
     # If we have 2 observations or more, calculate the reward.
-    if len(self.p.observations) > 1:
+    if len(agent.p.observations) > 1:
         reward = R_func(obs_dict, action, eta)
         agent.p.real_rewards.append(reward)
         agent.p.rewards.append(reward.double() / multiplier)
@@ -221,8 +224,9 @@ def mpc_api():
                 action.item(), SAT_stpt, obs_dict["Sys Out Temp."], obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"], obs_dict["Occupancy Flag"], reward))
     # if
 
-    print("Saving agent...")
-    torch.save(agent, 'torch_model.pth')
+    if args.save_agent:
+        print("Saving agent...")
+        torch.save(agent, 'torch_model.pth')
 
 
 initialize()
