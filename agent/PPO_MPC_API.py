@@ -19,6 +19,9 @@ from utils import make_dict, R_func, Advantage_func, Replay_Memory, Dataset, nex
 
 from PPO_AGENT import PPO
 
+from google.cloud import secretmanager
+from google.cloud import storage
+
 app = Flask(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -72,14 +75,36 @@ u_lower = 0
 
 agent = None
 
+
+
 def initialize():
 
     global agent
+    repo_model = 'torch_model.pth'
+    bucket_model = 'torch_model_x.pth'
+
+    # Instantiates a client
+    storage_client = storage.Client()
+    project_id = os.environ['PROJECT_ID']
+    bucket_name = os.environ['AGENT_BUCKET']
+    bucket = storage_client.bucket(bucket_name)
+    blobs = list(storage_client.list_blobs(bucket_name, prefix='torch_model'))
+    if len(blobs) > 0:
+        print('Downloading agent from bucket...')
+        blobs[-1].download_to_filename('torch_model_x.pth')
+    else:
+        print('Agent model not available in bucket, uploading repo version...')
+        blob = bucket.blob(bucket_model)
+        blob.upload_from_filename(repo_model,
+                                  content_type='application/octet-stream')
+        os.rename(repo_model, bucket_model)
+
 
     print("Initializing agent...")
-    agent = torch.load('torch_model.pth')
+    agent = torch.load('torch_model_x.pth')
     agent.eval()
     if agent.p.start_time == None:
+        print('Fresh agent, initializing start_time to {}'.format(datetime.now()))
         agent.p.start_time = datetime.now()
 
 @app.route('/mpc/', methods=['POST'])

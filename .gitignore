@@ -118,3 +118,7 @@ eplus_env/envs/EnergyPlus-8-6-0
 EnergyPlus-8.6.0-198c6a3cff-Linux-x86_64.sh
 
 results
+*__.json
+
+.terraform
+*.tfstate*
