@@ -51,6 +51,7 @@ resource "google_storage_bucket" "gnu-rl-agent" {
 
 resource "google_cloudbuild_trigger" "build-trigger" {
   name = "gnu-rl-api-push-trigger"
+  description = "Push to gnu-rl-svc"
 
   github {
       owner = "raph84"
