@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "thermostat-tfstate"
+    bucket = "thermostat-292016-tfstate"
     prefix = "env/prod"
   }
 }
