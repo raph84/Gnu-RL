@@ -31,10 +31,14 @@ Use the Dockerfile to create and run a Docker image of Gnu-RL.
 
 ```
 # Create the Docker image
+## Dev Image
 docker build --pull --rm -f "Docker\Dockerfile" -t gnurl:latest "Docker"
 
+## Prod Image
+docker build --pull --target gnu-rl --rm -f "Docker\Dockerfile" -t gnurl:latest "Docker"
+
 # Run the Docker image
-docker run -it -p 8888:8888 -v gnurl:/Gnu-RL gnurl:latest /bin/bash
+docker run -it gnurl:latest /bin/bash
 
 # or
 
