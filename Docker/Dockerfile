@@ -1,29 +1,23 @@
-FROM python:3.7-slim-buster AS base
+FROM raph84/pytorch-slim-buster:latest AS base
 RUN apt-get update && \
     apt-get install -y git && \
     cd / && git clone --single-branch --branch gnu-rl-svc https://github.com/raph84/Gnu-RL.git && \
     cd / && git clone https://github.com/zhangzhizza/Gym-Eplus.git
 
 
-FROM python:3.7-slim-buster AS gnu-rl
-
-# Lock Python package version to 3.7
-RUN apt-get update && \
-    apt-get install dselect && \
-    dselect update && \
-    echo "python3 hold" | dpkg --set-selections
+FROM raph84/pytorch-slim-buster:latest AS gnu-rl
 
 COPY --from=base /Gnu-RL /Gnu-RL
 
-RUN pip3 install virtualenv && \
-    virtualenv virt_env --python=python3 
+# RUN pip3 install virtualenv && \
+#    virtualenv virt_env --python=python3 
 
 # Setup the Python environment
-RUN /bin/bash -c "source /virt_env/bin/activate && \
-                     cd /Gnu-RL && \
-                     pip3 install --default-timeout=100 -r requirements.txt"
+RUN pip3 install --default-timeout=100 -r /Gnu-RL/requirements.txt
 
 EXPOSE 8080/tcp
+
+
 
 FROM gnu-rl AS dev
 
