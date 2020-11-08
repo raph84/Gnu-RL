@@ -49,7 +49,9 @@ CMD ["/usr/sbin/sshd", "-D"]
 
 # Java required by Gym-Eplus / EnergyPlus
 RUN apt-get install -y vim && \
-      apt-get install -y openjdk-11-jdk
+    # mkdir needed to install openjdk on slim image
+    mkdir -p /usr/share/man/man1 && \ 
+    apt-get install -y openjdk-11-jdk
 
 
 # EnergyPlus runtime is a dependancy of Gym-Eplus.
