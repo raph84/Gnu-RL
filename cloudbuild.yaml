@@ -98,5 +98,7 @@ steps:
   - 'us-east4'
   - '--platform'
   - 'managed'
+  - '--service-account'
+  - '$_SERVICEACCOUNT'
 images:
 - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'

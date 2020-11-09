@@ -1,9 +1,14 @@
 #
 # Required environment variables : 
 #   - GOOGLE_APPPLICATION_CREDENTIALS
-#   - GOOGLE_PROJECT
 #
 #
+
+locals {
+  # Ids for multiple sets of EC2 instances, merged together
+  project_id = "thermostat-292016"
+}
+
 
 terraform {
   required_providers {
@@ -17,6 +22,7 @@ terraform {
 
 provider "google" {
   region  = "us-east4"
+  project = local.project_id
 }
 
 resource "google_service_account" "gnu-rl-agent" {
@@ -60,6 +66,11 @@ resource "google_storage_bucket" "gnu-rl-agent-bucket" {
 resource "google_cloudbuild_trigger" "build-trigger" {
   name = "gnu-rl-api-push-trigger"
   description = "Push to gnu-rl-svc"
+
+  substitutions = {
+    # used in Cloud Build to set Cloud Run identity
+    _SERVICEACCOUNT = "gnu-rl-agent@${local.project_id}.iam.gserviceaccount.com"
+  }
 
   github {
       owner = "raph84"
