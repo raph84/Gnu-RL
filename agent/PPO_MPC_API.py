@@ -245,14 +245,18 @@ def mpc_api():
     else:
         reward = None
 
-    print("{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(cur_time,
-                action.item(), SAT_stpt, obs_dict["Sys Out Temp."], obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"], obs_dict["Occupancy Flag"], reward))
+    result = "{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(
+        cur_time, action.item(), SAT_stpt, obs_dict["Sys Out Temp."],
+        obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"],
+        obs_dict["Occupancy Flag"], reward)
+    print(result)
     # if
 
     if args.save_agent:
         print("Saving agent...")
         torch.save(agent, 'torch_model.pth')
 
+    return result
 
 initialize()
 

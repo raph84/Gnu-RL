@@ -100,5 +100,9 @@ steps:
   - 'managed'
   - '--service-account'
   - '$_SERVICEACCOUNT'
+  - '--set-env-vars'
+  - 'PROJECT_ID=$PROJECT_ID'
+  - '--set-env-vars'
+  - 'AGENT_BUCKET=gnu-rl-agent'
 images:
 - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
