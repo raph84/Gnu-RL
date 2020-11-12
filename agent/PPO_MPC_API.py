@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 import copy
@@ -23,6 +24,12 @@ from google.cloud import secretmanager
 from google.cloud import storage
 
 app = Flask(__name__)
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
@@ -74,12 +81,15 @@ u_upper = 5
 u_lower = 0
 
 agent = None
-
+bucket = None
+storage_client = None
 
 
 def initialize():
 
     global agent
+    global bucket
+    global storage_client
     repo_model = 'torch_model.pth'
     bucket_model = 'torch_model_x.pth'
 
@@ -90,21 +100,21 @@ def initialize():
     bucket = storage_client.bucket(bucket_name)
     blobs = list(storage_client.list_blobs(bucket_name, prefix='torch_model'))
     if len(blobs) > 0:
-        print('Downloading agent from bucket...')
+        app.logger.info('Downloading agent from bucket...')
         blobs[-1].download_to_filename('torch_model_x.pth')
     else:
-        print('Agent model not available in bucket, uploading repo version...')
+        app.logger.info('Agent model not available in bucket, uploading repo version...')
         blob = bucket.blob(bucket_model)
         blob.upload_from_filename(repo_model,
                                   content_type='application/octet-stream')
         os.rename(repo_model, bucket_model)
 
 
-    print("Initializing agent...")
+    app.logger.info("Initializing agent...")
     agent = torch.load('torch_model_x.pth')
     agent.eval()
     if agent.p.start_time == None:
-        print('Fresh agent, initializing start_time to {}'.format(datetime.now()))
+        app.logger.info('Fresh agent, initializing start_time to {}'.format(datetime.now()))
         agent.p.start_time = datetime.now()
 
 @app.route('/mpc/', methods=['POST'])
@@ -123,11 +133,15 @@ def mpc_api():
         for k in list(d.keys()):
             if k not in dist_name:
                 del d[k]
-
     disturbance = pd.DataFrame(d_, index=dist_time)
-    target = pd.DataFrame(req['disturbances'], index=dist_time)[target_name]
     agent.dist = disturbance
     agent.n_dist = agent.dist.shape[1]
+
+
+    target = pd.DataFrame(req['disturbances'], index=dist_time)[target_name]
+    current_reading = pd.DataFrame(req['disturbances'],
+                                   index=dist_time)[target_name]
+    target.append(current_reading)
     agent.target = target
 
     dir = 'results'
@@ -135,25 +149,23 @@ def mpc_api():
         os.mkdir(dir)
 
     multiplier = 10  # Normalize the reward for better training performance
-    n_step = 96  #timesteps per day
-
-
-
 
 
 
     # TODO : ==== Values from API request ====
-    obs_dict = {k: req['disturbances'][0][k] for k in obs_name}
+    obs_dict = {k: req['current'][k] for k in obs_name}
 
     # TODO : Date from API request
-    cur_time = pd.datetime(year = date_request.year, month = date_request.month, day = date_request.day)
+    #cur_time = pd.datetime(year = date_request.year, month = date_request.month, day = date_request.day)
+    cur_time = date_request
 
 
     # 96 timesteps per day; which timestep are we?
+    n_step = 96  #timesteps per day
     step = args.step  # 900 seconds per step
     seconds_since_midnight = (date_request - date_request.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-    t = math.floor(seconds_since_midnight / step)
-    print("Step {} of {}".format(t,n_step))
+    newvariable966 = math.floor(seconds_since_midnight / step)
+    app.logger.info("Step {} of {}".format(newvariable966,n_step))
 
 
     # One action at a time for the current day
@@ -164,9 +176,13 @@ def mpc_api():
 
     # New day? Update model and reset history arrays
     # TODO : don't rely on NOW. Use date from API request
-    if agent.p.start_time.day != date_request.day:
+    if agent.p.start_time.day != date_request.day & len(agent.p.states) > 1:
 
-        print("==== Begining new day - Update model - Reset agent ====")
+        app.logger.info("==== Begining new day - Update model - Reset agent ====")
+        app.logger.info("Agent start_time : {}".format(agent.p.start_time))
+        app.logger.info("Request date : {}".format(date_request))
+        app.logger.info("Agent states : {}".format(len(agent.p.states)))
+
 
         # Torch variables to append to agent memory
         advantages = Advantage_func(agent.p.rewards, args.gamma)
@@ -188,7 +204,7 @@ def mpc_api():
             warnings.warn("agent.memory.len should be greater than 0.")
 
         agent.p.perf.append([np.mean(agent.p.real_rewards), np.std(agent.p.real_rewards)])
-        print("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
+        app.logger.info("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
 
         save_name = agent.p.timestamp.strftime("%Y%m%d_") + args.save_name
         obs_df = pd.DataFrame(np.array(agent.p.observations), index = np.array(timeStamp), columns = obs_name_filter)
@@ -207,11 +223,17 @@ def mpc_api():
 
         agent.p = PPO.P()
 
+    else:
+        if agent.p.start_time.day != date_request.day & len(agent.p.states) == 0:
+            app.logger.warn("New day and no state. Agent.p.start_time set to date_request.")
+            app.logger.info("Request date : {}".format(date_request))
+            agent.p.start_time = date_request
 
 
     agent.p.observations.append([list(obs_dict.values())])
     agent.p.timestamp.append(cur_time)
 
+    app.logger.debug(obs_dict)
     state = torch.tensor([obs_dict[name] for name in state_name]).unsqueeze(0).double()
     agent.p.states.append(state)
 
@@ -235,7 +257,7 @@ def mpc_api():
         action = torch.zeros_like(action)
     agent.p.actions.append(action)
     agent.p.actions_taken.append([action.item(), SAT_stpt])
-    print("New indoor set point : {}".format(SAT_stpt))
+    app.logger.info("New indoor set point : {}".format(SAT_stpt))
 
     # If we have 2 observations or more, calculate the reward.
     if len(agent.p.observations) > 1:
@@ -249,17 +271,21 @@ def mpc_api():
         cur_time, action.item(), SAT_stpt, obs_dict["Sys Out Temp."],
         obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"],
         obs_dict["Occupancy Flag"], reward)
-    print(result)
+    app.logger.info(result)
     # if
 
     if args.save_agent:
-        print("Saving agent...")
-        torch.save(agent, 'torch_model.pth')
+        app.logger.info("Saving agent...")
+        torch.save(agent, 'torch_model_x.pth')
+        blob = bucket.blob('torch_model_x.pth')
+        blob.upload_from_filename('torch_model_x.pth',content_type='application/octet-stream')
 
     return result
 
 initialize()
 
 if __name__ == "__main__":
-    print("Loading Flask API...")
+    print("Main")
+
+    app.logger.info("Loading Flask API...")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
