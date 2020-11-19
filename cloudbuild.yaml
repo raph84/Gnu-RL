@@ -5,6 +5,14 @@ steps:
 # Push the container image to Container Registry
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'container'
+  - 'images'
+  - 'add-tag'
+  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
+  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:latest'
 
 
 - id: 'branch name'
@@ -86,30 +94,30 @@ steps:
 
 
 # Deploy container image to Cloud Run
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args:
-  - 'run'
-  - 'deploy'
-  - 'gnu-rl-agent'
-  - '--image'
-  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
-  - '--region'
-  - 'us-east4'
-  - '--platform'
-  - 'managed'
-  - '--service-account'
-  - '$_SERVICEACCOUNT'
-  - '--set-env-vars'
-  - 'PROJECT_ID=$PROJECT_ID'
-  - '--set-env-vars'
-  - 'AGENT_BUCKET=gnu-rl-agent'
-  - '--concurrency'
-  - '1'
-  - '--max-instances'
-  - '1'
-  - '--labels'
-  - 'project=thermostat'
+#- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#  entrypoint: gcloud
+#  args:
+#  - 'run'
+#  - 'deploy'
+#  - 'gnu-rl-agent'
+#  - '--image'
+#  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
+#  - '--region'
+#  - 'us-east4'
+#  - '--platform'
+#  - 'managed'
+#  - '--service-account'
+#  - '$_SERVICEACCOUNT'
+#  - '--set-env-vars'
+#  - 'PROJECT_ID=$PROJECT_ID'
+#  - '--set-env-vars'
+#  - 'AGENT_BUCKET=gnu-rl-agent'
+#  - '--concurrency'
+#  - '1'
+#  - '--max-instances'
+#  - '1'
+#  - '--labels'
+#  - 'project=thermostat'
 
 
 images:

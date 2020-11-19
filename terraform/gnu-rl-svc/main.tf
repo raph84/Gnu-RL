@@ -83,3 +83,56 @@ resource "google_cloudbuild_trigger" "build-trigger" {
 
   filename = "cloudbuild.yaml"
 }
+
+resource "google_cloud_run_service" "default" {
+  location                   = "us-east4"
+  name                       = "gnu-rl-agent"
+  project                    = "thermostat-292016"
+  template {
+        
+        spec {
+            container_concurrency = 1
+            service_account_name  = "gnu-rl-agent@thermostat-292016.iam.gserviceaccount.com"
+            timeout_seconds       = 300
+
+            containers {
+                image   = "us.gcr.io/thermostat-292016/gnu-rl-agent:latest"
+
+                env {
+                    name  = "PROJECT_ID"
+                    value = "thermostat-292016"
+                }
+                env {
+                    name  = "AGENT_BUCKET"
+                    value = "gnu-rl-agent"
+                }
+
+                env {
+                    name  = "SAVE_AGENT"
+                    #value = "--save_agent"
+                    value = " "
+                }
+                ports {
+                    container_port = 8080
+                }
+
+                resources {
+                    limits   = {
+                        "cpu"    = "1000m"
+                        "memory" = "256Mi"
+                    }
+                    requests = {}
+                }
+            }
+        }
+    }
+}
+
+resource "google_cloud_run_service_iam_member" "member" {
+  project = local.project_id
+  service = google_cloud_run_service.default.name
+  role = "roles/run.invoker"
+  location = "us-east4"
+  member = join(":", ["serviceAccount", "thermostat-agent@thermostat-292016.iam.gserviceaccount.com"])
+  
+}

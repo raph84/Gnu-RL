@@ -84,6 +84,8 @@ agent = None
 bucket = None
 storage_client = None
 
+app.logger.info("Update agent after each step : {}".format(args.save_agent))
+
 
 def initialize():
 
@@ -176,7 +178,7 @@ def mpc_api():
 
     # New day? Update model and reset history arrays
     # TODO : don't rely on NOW. Use date from API request
-    if agent.p.start_time.day != date_request.day & len(agent.p.states) > 1:
+    if agent.p.start_time.day != date_request.day and len(agent.p.states) > 1:
 
         app.logger.info("==== Begining new day - Update model - Reset agent ====")
         app.logger.info("Agent start_time : {}".format(agent.p.start_time))
@@ -192,7 +194,13 @@ def mpc_api():
         actions = torch.stack(agent.p.actions).squeeze(1).detach().clone()
         CC = torch.stack(agent.p.CC).squeeze() # n_batch x T x (m+n) x (m+n)
         cc = torch.stack(agent.p.cc).squeeze() # n_batch x T x (m+n)
-        disturbance = torch.stack(agent.p.disturbances) # n_batch x T x n_dist
+
+
+        # TODO don't save long term prevision in disturbances. Keep realtime reading only
+        disturbance = torch.stack(agent.p.disturbances)  # n_batch x T x n_dist
+        
+
+
         agent.memory.append(states, actions, next_states, advantages, old_log_probs, disturbance, CC, cc)
 
         if (agent.memory.len>= 1):
