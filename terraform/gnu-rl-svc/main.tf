@@ -45,6 +45,14 @@ resource "google_storage_bucket_iam_binding" "gnu-rl-agent-bucket-ObjectViewer" 
   ]
 }
 
+resource "google_storage_bucket_iam_binding" "gnu-rl-agent-cloud-debug" {
+  bucket = google_storage_bucket.gnu-rl-agent-bucket.name
+  role = "roles/clouddebugger.agent"
+  members = [
+    join(":", ["serviceAccount", google_service_account.gnu-rl-agent.email])
+  ]
+}
+
 resource "google_storage_bucket" "gnu-rl-agent-bucket" {
   name          = "gnu-rl-agent"
   location      = "US-EAST4"
@@ -136,3 +144,4 @@ resource "google_cloud_run_service_iam_member" "member" {
   member = join(":", ["serviceAccount", "thermostat-agent@thermostat-292016.iam.gserviceaccount.com"])
   
 }
+
