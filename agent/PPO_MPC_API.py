@@ -1,3 +1,10 @@
+try:
+    import googleclouddebugger
+    googleclouddebugger.enable(breakpoint_enable_canary=False)
+
+except ImportError:
+    pass
+
 import logging
 import numpy as np
 import pandas as pd
@@ -198,7 +205,7 @@ def mpc_api():
 
         # TODO don't save long term prevision in disturbances. Keep realtime reading only
         disturbance = torch.stack(agent.p.disturbances)  # n_batch x T x n_dist
-        
+
 
 
         agent.memory.append(states, actions, next_states, advantages, old_log_probs, disturbance, CC, cc)
