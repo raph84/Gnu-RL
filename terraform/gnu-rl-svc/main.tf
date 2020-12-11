@@ -142,4 +142,3 @@ resource "google_cloud_run_service_iam_member" "member" {
   member = join(":", ["serviceAccount", "thermostat-agent@thermostat-292016.iam.gserviceaccount.com"])
   
 }
-
