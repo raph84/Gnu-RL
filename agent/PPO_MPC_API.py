@@ -19,6 +19,7 @@ import os
 import sys
 
 import torch
+import torch.utils.data as data
 
 from flask import Flask, url_for, request
 import json
