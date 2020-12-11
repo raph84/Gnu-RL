@@ -4,9 +4,9 @@ steps:
   args: ['build','--target', 'gnu-rl-api', '-f', 'Docker/Dockerfile', '--tag', 'gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA','--tag', 'gcr.io/$PROJECT_ID/gnu-rl-agent:latest', '.']
 # Push the container image to Container Registry
 - name: 'docker'
-  args: ['push', 'gcr.io/$PROJECT_ID/thermostat-agent:$COMMIT_SHA']
+  args: ['push', 'gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA']
 - name: 'docker'
-  args: ['push', 'gcr.io/$PROJECT_ID/thermostat-agent:latest']
+  args: ['push', 'gcr.io/$PROJECT_ID/gnu-rl-agent:latest']
 
 
 - id: 'branch name'
