@@ -7,6 +7,7 @@
 locals {
   # Ids for multiple sets of EC2 instances, merged together
   project_id = "thermostat-292016"
+  api_name = "gnu-rl-agent"
 }
 
 
@@ -16,6 +17,10 @@ terraform {
       # using beta for Cloud Build GitHub
       source = "hashicorp/google-beta"
       version = "3.46.0"
+    }
+    docker = {
+      source = "terraform-providers/docker"
+      version = "~> 2.7.2"
     }
   }
 }
@@ -90,6 +95,31 @@ resource "google_cloudbuild_trigger" "build-trigger" {
   filename = "cloudbuild.yaml"
 }
 
+data "google_client_config" "default" {}
+
+provider "docker" {
+  registry_auth {
+    address  = "gcr.io"
+    username = "oauth2accesstoken"
+    password = data.google_client_config.default.access_token
+  }
+  #host = "npipe:////.//pipe//docker_engine"
+}
+
+data "docker_registry_image" "gnu-rl-api-image" {
+  name = "gcr.io/${local.project_id}/${local.api_name}"
+}
+
+data "google_container_registry_image" "gnu-rl-api-image-latest" {
+  name    = local.api_name
+  project = local.project_id
+  digest  = data.docker_registry_image.gnu-rl-api-image.sha256_digest
+}
+
+output "image_url" {
+  value = data.google_container_registry_image.gnu-rl-api-image-latest.image_url
+}
+
 resource "google_cloud_run_service" "default" {
   location                   = "us-east4"
   name                       = "gnu-rl-agent"
@@ -102,7 +132,7 @@ resource "google_cloud_run_service" "default" {
             timeout_seconds       = 300
 
             containers {
-                image   = "us.gcr.io/thermostat-292016/gnu-rl-agent:latest"
+                image   = data.google_container_registry_image.gnu-rl-api-image-latest.image_url
 
                 env {
                     name  = "PROJECT_ID"
