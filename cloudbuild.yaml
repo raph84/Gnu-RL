@@ -1,18 +1,12 @@
 steps:
 # Build the container image
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build','--target', 'gnu-rl-api', '-f', 'Docker/Dockerfile', '--tag', 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA', '.']
+  args: ['build','--target', 'gnu-rl-api', '-f', 'Docker/Dockerfile', '--tag', 'gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA','--tag', 'gcr.io/$PROJECT_ID/gnu-rl-agent:latest', '.']
 # Push the container image to Container Registry
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA']
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args:
-  - 'container'
-  - 'images'
-  - 'add-tag'
-  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
-  - 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:latest'
+- name: 'docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/thermostat-agent:$COMMIT_SHA']
+- name: 'docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/thermostat-agent:latest']
 
 
 - id: 'branch name'
@@ -121,4 +115,5 @@ steps:
 
 
 images:
-- 'us.gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
+- 'gcr.io/$PROJECT_ID/gnu-rl-agent:$COMMIT_SHA'
+- 'gcr.io/$PROJECT_ID/gnu-rl-agent:latest'
