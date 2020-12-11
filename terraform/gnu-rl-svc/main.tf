@@ -45,12 +45,10 @@ resource "google_storage_bucket_iam_binding" "gnu-rl-agent-bucket-ObjectViewer" 
   ]
 }
 
-resource "google_cloud_run_service_iam_member" "cloud-debugger" {
-  project  = local.project_id
-  service  = "thermostat-agent"
-  role     = "roles/clouddebugger.agent"
-  location = "us-east4"
-  member   = join(":", ["serviceAccount", google_service_account.gnu-rl-agent.email])
+resource "google_project_iam_member" "cloud-debuger" {
+  project = local.project_id
+  role    = "roles/clouddebugger.agent"
+  member  = join(":", ["serviceAccount", google_service_account.gnu-rl-agent.email])
 }
 
 resource "google_storage_bucket" "gnu-rl-agent-bucket" {
