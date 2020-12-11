@@ -19,6 +19,7 @@ import os
 import sys
 
 import torch
+import torch.utils.data as data
 
 from flask import Flask, url_for, request
 import json
@@ -282,12 +283,17 @@ def mpc_api():
     else:
         reward = None
 
-    result = "{}, Action: {}, SAT Setpoint: {}, Actual SAT:{}, State: {}, Target: {}, Occupied: {}, Reward: {}".format(
-        cur_time, action.item(), SAT_stpt, obs_dict["Sys Out Temp."],
-        obs_dict["Indoor Temp."], obs_dict["Indoor Temp. Setpoint"],
-        obs_dict["Occupancy Flag"], reward)
+    result = {
+        'action': action.item(),
+        'sat_stpt': SAT_stpt,
+        'sys_out_temp': obs_dict["Sys Out Temp."],
+        'indoor_temp': obs_dict["Indoor Temp."],
+        'indoor_temp_setpoint': obs_dict["Indoor Temp. Setpoint"],
+        'occupancy_flag': obs_dict["Occupancy Flag"],
+        'reward': reward
+    }
+    
     app.logger.info(result)
-    # if
 
     if args.save_agent:
         app.logger.info("Saving agent...")
