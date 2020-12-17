@@ -290,7 +290,7 @@ def mpc_api():
         'indoor_temp': obs_dict["Indoor Temp."],
         'indoor_temp_setpoint': obs_dict["Indoor Temp. Setpoint"],
         'occupancy_flag': obs_dict["Occupancy Flag"],
-        'reward': reward.toString()
+        'reward': reward.double()
     }
     
     app.logger.info(result)
