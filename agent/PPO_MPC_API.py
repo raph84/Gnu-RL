@@ -31,6 +31,10 @@ from PPO_AGENT import PPO
 from google.cloud import secretmanager
 from google.cloud import storage
 
+from utils_date import utcnow, ceil_dt
+from pytz import timezone
+import pytz
+
 app = Flask(__name__)
 
 if __name__ != '__main__':
@@ -123,9 +127,18 @@ def initialize():
     app.logger.info("Initializing agent...")
     agent = torch.load('torch_model_x.pth')
     agent.eval()
+    agent.p.start_time = agent.p.start_time.replace(tzinfo=timezone('America/Montreal'))
+    print(agent.p.start_time)
     if agent.p.start_time == None:
         app.logger.info('Fresh agent, initializing start_time to {}'.format(datetime.now()))
         agent.p.start_time = datetime.now()
+    else:
+        elapse = utcnow() - agent.p.start_time
+        if elapse.days > 2:
+            agent_now = utcnow()
+            app.logger.info('Agent too old, initializing start_time to {}'.format(agent_now))
+            agent.p.start_time = agent_now
+
 
 @app.route('/mpc/', methods=['POST'])
 def mpc_api():
@@ -291,7 +304,7 @@ def mpc_api():
         'indoor_temp_setpoint': obs_dict["Indoor Temp. Setpoint"],
         'occupancy_flag': obs_dict["Occupancy Flag"]
     }
-    
+
     app.logger.info(result)
 
     if args.save_agent:
