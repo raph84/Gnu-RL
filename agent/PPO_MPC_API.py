@@ -181,6 +181,7 @@ def mpc_api():
     # TODO : Date from API request
     #cur_time = pd.datetime(year = date_request.year, month = date_request.month, day = date_request.day)
     cur_time = date_request
+    app.logger.info("date_request : {}".format(cur_time))
 
 
     # 96 timesteps per day; which timestep are we?
