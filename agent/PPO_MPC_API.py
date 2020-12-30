@@ -34,6 +34,7 @@ from google.cloud import storage
 from utils_date import utcnow, ceil_dt
 from pytz import timezone
 import pytz
+from yadt import parse_date
 
 app = Flask(__name__)
 
@@ -145,14 +146,14 @@ def mpc_api():
 
     req = request.get_json()
     pickle.dump(req, open(next_path("results/req-%s.p"), "wb"))
-    date_request = datetime.strptime(req['date'], '%Y-%m-%d %H:%M:%S')
+    date_request = parse_date(req['date'])
     #target = [req['disturbances'][0][k] for k in target_name]
 
     # TODO : DISTURBANCE ; In relation to obs below?
     d_ = copy.deepcopy(req['disturbances'])
     dist_time = []
     for d in d_:
-        dist_time.append(datetime.strptime(d['dt'], '%Y-%m-%d %H:%M:%S'))
+        dist_time.append(parse_date(d['dt']))
         for k in list(d.keys()):
             if k not in dist_name:
                 del d[k]
