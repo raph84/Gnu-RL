@@ -237,7 +237,7 @@ def mpc_api():
         agent.p.perf.append([np.mean(agent.p.real_rewards), np.std(agent.p.real_rewards)])
         app.logger.info("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
 
-        save_name = agent.p.timestamp.strftime("%Y%m%d_") + args.save_name
+        save_name = agent.p.timestamp[-1].strftime("%Y%m%d_") + args.save_name
         obs_df = pd.DataFrame(np.array(agent.p.observations), index = np.array(timeStamp), columns = obs_name_filter)
         action_df = pd.DataFrame(np.array(agent.p.actions_taken), index = np.array(timeStamp[:-1]), columns = ["Delta T", "Supply Air Temp. Setpoint"])
         obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
