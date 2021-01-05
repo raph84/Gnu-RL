@@ -145,7 +145,7 @@ resource "google_cloud_run_service" "default" {
 
                 env {
                     name  = "SAVE_AGENT"
-                    value = "--save_agent"
+                    value = "True"
                     #value = " "
                 }
                 ports {

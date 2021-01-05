@@ -47,6 +47,11 @@ if __name__ != '__main__':
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
 
+save_agent = os.environ.get('SAVE_AGENT', "")
+if save_agent == "True":
+    save_agent = True
+else:
+    save_agent = False
 
 parser = argparse.ArgumentParser(description='GruRL Demo: Online Learning')
 parser.add_argument('--gamma', type=float, default=0.98, metavar='G',
@@ -67,8 +72,6 @@ parser.add_argument('--eta', type=int, default=4,
                     help='Hyper Parameter for Balancing Comfort and Energy')
 parser.add_argument('--eps', type=int, default=90,
                     help='Total number of episode. Each episode is a natural day')
-parser.add_argument('--save_agent', type=bool, default=False, const=True, nargs="?",
-                    help='Save updates of the agent.')
 args, unknown = parser.parse_known_args()
 
 
