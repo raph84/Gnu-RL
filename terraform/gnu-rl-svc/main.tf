@@ -42,6 +42,14 @@ resource "google_storage_bucket_iam_binding" "gnu-rl-agent-bucket-ObjectCreator"
   ]
 }
 
+resource "google_storage_bucket_iam_binding" "gnu-rl-agent-bucket-ObjectAdmin" {
+  bucket = google_storage_bucket.gnu-rl-agent-bucket.name
+  role = "roles/storage.objectAdmin"
+  members = [
+    join(":", ["serviceAccount", google_service_account.gnu-rl-agent.email])
+  ]
+}
+
 resource "google_storage_bucket_iam_binding" "gnu-rl-agent-bucket-ObjectViewer" {
   bucket = google_storage_bucket.gnu-rl-agent-bucket.name
   role = "roles/storage.objectViewer"
