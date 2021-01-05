@@ -100,7 +100,7 @@ agent = None
 bucket = None
 storage_client = None
 
-app.logger.info("Update agent after each step : {}".format(args.save_agent))
+app.logger.info("Update agent after each step : {}".format(save_agent))
 
 
 def initialize():
@@ -312,13 +312,13 @@ def mpc_api():
 
     app.logger.info(result)
 
-    if args.save_agent:
+    if save_agent:
         app.logger.info("Saving agent...")
         torch.save(agent, 'torch_model_x.pth')
         blob = bucket.blob('torch_model_x.pth')
         blob.upload_from_filename('torch_model_x.pth',content_type='application/octet-stream')
     else:
-        app.logger.warning("arg.save_agent == False; Agent current state will not be persisted.")
+        app.logger.warning("environ.save_agent == False; Agent current state will not be persisted.")
     return result
 
 initialize()
