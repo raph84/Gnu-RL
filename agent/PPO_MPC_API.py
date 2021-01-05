@@ -314,7 +314,8 @@ def mpc_api():
         torch.save(agent, 'torch_model_x.pth')
         blob = bucket.blob('torch_model_x.pth')
         blob.upload_from_filename('torch_model_x.pth',content_type='application/octet-stream')
-
+    else:
+        app.logger.warning("arg.save_agent == False; Agent current state will not be persisted.")
     return result
 
 initialize()
