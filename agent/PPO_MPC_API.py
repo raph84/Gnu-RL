@@ -47,6 +47,13 @@ if __name__ != '__main__':
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEVICE
 
+
+standalone = os.environ.get('STANDALONE', "")
+if standalone == "True":
+    standalone = True
+else:
+    standalone = False
+
 save_agent = os.environ.get('SAVE_AGENT', "")
 if save_agent == "True":
     save_agent = True
@@ -111,21 +118,28 @@ def initialize():
     repo_model = 'torch_model.pth'
     bucket_model = 'torch_model_x.pth'
 
-    # Instantiates a client
-    storage_client = storage.Client()
-    project_id = os.environ['PROJECT_ID']
-    bucket_name = os.environ['AGENT_BUCKET']
-    bucket = storage_client.bucket(bucket_name)
-    blobs = list(storage_client.list_blobs(bucket_name, prefix='torch_model'))
-    if len(blobs) > 0:
-        app.logger.info('Downloading agent from bucket...')
-        blobs[-1].download_to_filename('torch_model_x.pth')
+
+    if standalone:
+        from shutil import copyfile
+        copyfile(repo_model, bucket_model)
     else:
-        app.logger.info('Agent model not available in bucket, uploading repo version...')
-        blob = bucket.blob(bucket_model)
-        blob.upload_from_filename(repo_model,
-                                  content_type='application/octet-stream')
-        os.rename(repo_model, bucket_model)
+        # Instantiates a client
+        storage_client = storage.Client()
+        project_id = os.environ['PROJECT_ID']
+        bucket_name = os.environ['AGENT_BUCKET']
+        bucket = storage_client.bucket(bucket_name)
+        blobs = list(storage_client.list_blobs(bucket_name, prefix='torch_model'))
+
+
+        if len(blobs) > 0:
+            app.logger.info('Downloading agent from bucket...')
+            blobs[-1].download_to_filename('torch_model_x.pth')
+        else:
+            app.logger.info('Agent model not available in bucket, uploading repo version...')
+            blob = bucket.blob(bucket_model)
+            blob.upload_from_filename(repo_model,
+                                    content_type='application/octet-stream')
+            os.rename(repo_model, bucket_model)
 
 
     app.logger.info("Initializing agent...")
@@ -167,8 +181,13 @@ def mpc_api():
 
     target = pd.DataFrame(req['disturbances'], index=dist_time)[target_name]
     current_reading = pd.DataFrame(req['disturbances'],
-                                   index=dist_time)[target_name]
-    target.append(current_reading)
+                                   index=dist_time)[dist_name]
+
+    # Min-Max Normalization
+    disturbance = (disturbance - disturbance.min()) / (disturbance.max() -
+                                                       disturbance.min())
+
+    #target.append(current_reading)
     agent.target = target
 
     dir = 'results'
@@ -274,6 +293,7 @@ def mpc_api():
 
     # TODO : review dt content
     dt = np.array(agent.dist[cur_time : cur_time + pd.Timedelta(seconds = (agent.T-2) * agent.step)]) # T-1 x n_dist
+    app.logger.debug(f"dist for current time horizon : {dt}")
     dt = torch.tensor(dt).transpose(0, 1) # n_dist x T-1
     ft = agent.Dist_func(dt) # T-1 x 1 x n_state
     C, c = agent.Cost_function(cur_time)
