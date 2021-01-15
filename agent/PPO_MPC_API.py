@@ -246,7 +246,7 @@ def mpc_api():
 
 
 
-        agent.memory.append(states, actions, next_states, advantages, old_log_probs, disturbance, CC, cc)
+        # agent.memory.append(states, actions, next_states, advantages, old_log_probs, disturbance, CC, cc)
 
         if (agent.memory.len>= 1):
             batch_states, batch_actions, b_next_states, batch_dist, batch_rewards, batch_old_logprobs, batch_CC, batch_cc = agent.memory.sample_batch(args.update_episode)
@@ -260,16 +260,22 @@ def mpc_api():
         app.logger.info("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
 
         save_name = agent.p.timestamp[-1].strftime("%Y%m%d_") + args.save_name
-        obs_df = pd.DataFrame(np.array(agent.p.observations),
+
+        temp_list = []
+        for o in agent.p.observations:
+            temp_list.append(o[0])
+
+        obs_df = pd.DataFrame(np.array(temp_list),
                               index=np.array(agent.p.timestamp),
                               columns=obs_name)
         action_df = pd.DataFrame(
-            np.array(agent.p.actions_taken),
+            np.array(agent.p.actions_taken[:-1]),
             index=np.array(agent.p.timestamp[:-1]),
             columns=["Delta T", "Supply Air Temp. Setpoint"])
         obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
         action_df.to_pickle("results/perf_"+save_name+"_actions.pkl")
-        pickle.dump(np.array(perf), open("results/perf_"+save_name+".npy", "wb"))
+        pickle.dump(np.array(agent.p.perf),
+                    open("results/perf_" + save_name + ".npy", "wb"))
 
         # Save weights
         F_path = next_path("results/weights/ppo_F-%s.npy")

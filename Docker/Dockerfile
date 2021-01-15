@@ -34,7 +34,7 @@ FROM gnu-rl AS dev
 
 COPY --from=base /Gym-Eplus /Gym-Eplus
 
-RUN   apt-get install -y openssh-server && \
+RUN   apt-get update && apt-get install -y openssh-server && \
       apt-get install -y curl && \
       curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
       apt-get install -y nodejs
@@ -69,8 +69,7 @@ RUN apt-get install -y wget && \
 
 
 # Setup the Python environment
-RUN /bin/bash -c "source /virt_env/bin/activate && \
-                    pip3 install gym && \
+RUN /bin/bash -c "pip3 install gym && \
                     cd /Gnu-RL/eplus_env && \
                     cp -R * /Gym-Eplus/eplus_env/ && \
                     pip3 install -e /Gym-Eplus/ && \

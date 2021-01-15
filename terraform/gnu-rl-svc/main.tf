@@ -111,7 +111,7 @@ provider "docker" {
     username = "oauth2accesstoken"
     password = data.google_client_config.default.access_token
   }
-  #host = "npipe:////.//pipe//docker_engine"
+  host = "npipe:////.//pipe//docker_engine"
 }
 
 data "docker_registry_image" "gnu-rl-api-image" {
@@ -163,7 +163,7 @@ resource "google_cloud_run_service" "default" {
                 resources {
                     limits   = {
                         "cpu"    = "1000m"
-                        "memory" = "700Mi"
+                        "memory" = "701Mi"
                     }
                     requests = {}
                 }
