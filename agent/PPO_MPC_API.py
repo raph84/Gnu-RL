@@ -259,10 +259,14 @@ def mpc_api():
         agent.p.perf.append([np.mean(agent.p.real_rewards), np.std(agent.p.real_rewards)])
         app.logger.info("{}, reward: {}".format(cur_time, np.mean(agent.p.real_rewards)))
 
-        timeStamp = agent.p.observations['dt'].tolist()
         save_name = agent.p.timestamp[-1].strftime("%Y%m%d_") + args.save_name
-        obs_df = pd.DataFrame(np.array(agent.p.observations), index = np.array(timeStamp), columns = obs_name_filter)
-        action_df = pd.DataFrame(np.array(agent.p.actions_taken), index = np.array(timeStamp[:-1]), columns = ["Delta T", "Supply Air Temp. Setpoint"])
+        obs_df = pd.DataFrame(np.array(agent.p.observations),
+                              index=np.array(agent.p.timestamp),
+                              columns=obs_name_filter)
+        action_df = pd.DataFrame(
+            np.array(agent.p.actions_taken),
+            index=np.array(agent.p.timestamp[:-1]),
+            columns=["Delta T", "Supply Air Temp. Setpoint"])
         obs_df.to_pickle("results/perf_"+save_name+"_obs.pkl")
         action_df.to_pickle("results/perf_"+save_name+"_actions.pkl")
         pickle.dump(np.array(perf), open("results/perf_"+save_name+".npy", "wb"))
@@ -282,6 +286,7 @@ def mpc_api():
             app.logger.warn("New day and no state. Agent.p.start_time set to date_request.")
             app.logger.info("Request date : {}".format(date_request))
             agent.p.start_time = date_request
+
 
 
     agent.p.observations.append([list(obs_dict.values())])
