@@ -262,7 +262,7 @@ def mpc_api():
         save_name = agent.p.timestamp[-1].strftime("%Y%m%d_") + args.save_name
         obs_df = pd.DataFrame(np.array(agent.p.observations),
                               index=np.array(agent.p.timestamp),
-                              columns=obs_name_filter)
+                              columns=obs_name)
         action_df = pd.DataFrame(
             np.array(agent.p.actions_taken),
             index=np.array(agent.p.timestamp[:-1]),
