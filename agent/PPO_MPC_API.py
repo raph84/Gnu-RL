@@ -145,8 +145,6 @@ def initialize():
     app.logger.info("Initializing agent...")
     agent = torch.load('torch_model_x.pth')
     agent.eval()
-
-    if agent.p.start_time is not None:
         
 
     app.logger.info('Initial start_time : {}'.format(agent.p.start_time))
