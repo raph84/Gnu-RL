@@ -145,18 +145,22 @@ def initialize():
     app.logger.info("Initializing agent...")
     agent = torch.load('torch_model_x.pth')
     agent.eval()
-    agent.p.start_time = agent.p.start_time.replace(tzinfo=timezone('America/Montreal'))
-    print(agent.p.start_time)
+
+    if agent.p.start_time is not None:
+        
+
+    app.logger.info('Initial start_time : {}'.format(agent.p.start_time))
     if agent.p.start_time == None:
         app.logger.info('Fresh agent, initializing start_time to {}'.format(datetime.now()))
         agent.p.start_time = datetime.now()
     else:
+        agent.p.start_time = agent.p.start_time.replace(tzinfo=timezone('America/Montreal'))
         elapse = utcnow() - agent.p.start_time
         if elapse.days > 2:
             agent_now = utcnow()
             app.logger.info('Agent too old, initializing start_time to {}'.format(agent_now))
             agent.p.start_time = agent_now
-
+    app.logger.info('start_time : {}'.format(agent.p.start_time))
 
 @app.route('/mpc/', methods=['POST'])
 def mpc_api():
