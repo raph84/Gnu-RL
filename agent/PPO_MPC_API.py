@@ -108,14 +108,15 @@ storage_client = None
 
 app.logger.info("Update agent after each step : {}".format(save_agent))
 
+repo_model = 'torch_model.pth'
+bucket_model = 'torch_model_x.pth'
 
 def initialize():
 
     global agent
     global bucket
     global storage_client
-    repo_model = 'torch_model.pth'
-    bucket_model = 'torch_model_x.pth'
+    
 
 
     if standalone:
@@ -162,6 +163,8 @@ def initialize():
 @app.route('/mpc/', methods=['POST'])
 def mpc_api():
 
+    global repo_model
+    global bucket_model
 
     if utcnow() < parse_date("2021-01-16T00:00:00.000000-05:00"):
         result = {
@@ -175,6 +178,7 @@ def mpc_api():
     
     else:
         if utcnow() - parse_date("2021-01-16T00:00:00.000000-05:00") < timedelta(minutes=15):
+            
             blob = bucket.blob(bucket_model)
             blob.upload_from_filename(repo_model,
                                     content_type='application/octet-stream')
