@@ -44,7 +44,6 @@ if __name__ != '__main__':
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DEVICE
 
 
 standalone = os.environ.get('STANDALONE', "")
@@ -116,7 +115,7 @@ def initialize():
     global agent
     global bucket
     global storage_client
-    
+
 
 
     if standalone:
@@ -145,7 +144,7 @@ def initialize():
     app.logger.info("Initializing agent...")
     agent = torch.load('torch_model_x.pth')
     agent.eval()
-        
+
 
     app.logger.info('Initial start_time : {}'.format(agent.p.start_time))
     if agent.p.start_time == None:
@@ -176,15 +175,15 @@ def mpc_api():
             'indoor_temp_setpoint': 9,
             'occupancy_flag': 0
         }
-    
+
     else:
         if utcnow() - parse_date("2021-01-16T00:00:00.000000-05:00") < timedelta(minutes=15):
-            
+
             blob = bucket.blob(bucket_model)
             blob.upload_from_filename(repo_model,
                                     content_type='application/octet-stream')
             os.rename(repo_model, bucket_model)
-            
+
             app.logger.info("Initializing agent*****...")
             agent = torch.load('torch_model_x.pth')
             agent.eval()
@@ -319,8 +318,9 @@ def mpc_api():
         agent.p = PPO.P()
 
     else:
-        if agent.p.start_time.day != date_request.day & len(agent.p.states) == 0:
+        if agent.p.start_time.day != date_request.day and len(agent.p.states) == 0:
             app.logger.warn("New day and no state. Agent.p.start_time set to date_request.")
+            app.logger.info("agent.p.states : {}".format(len(agent.p.states)))
             app.logger.info("Request date : {}".format(date_request))
             agent.p.start_time = date_request
 
