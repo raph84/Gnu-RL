@@ -165,6 +165,7 @@ def mpc_api():
 
     global repo_model
     global bucket_model
+    global agent
 
     if utcnow() < parse_date("2021-01-16T00:00:00.000000-05:00"):
         result = {
