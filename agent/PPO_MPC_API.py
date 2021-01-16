@@ -163,7 +163,7 @@ def initialize():
 def mpc_api():
 
 
-    if utcnow() ­<= parse_date("2021-01-16T00:00:00.000000-05:00"):
+    if utcnow() < parse_date("2021-01-16T00:00:00.000000-05:00"):
         result = {
             'action': 0.01,
             'sat_stpt': 0.01,
