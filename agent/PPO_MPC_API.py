@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import copy
 import pickle
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import warnings
 import argparse
@@ -31,10 +31,9 @@ from PPO_AGENT import PPO
 from google.cloud import secretmanager
 from google.cloud import storage
 
-from utils_date import utcnow, ceil_dt
 from pytz import timezone
 import pytz
-from yadt import parse_date
+from yadt import parse_date, utcnow, floor_date, ceil_date
 
 app = Flask(__name__)
 
@@ -149,19 +148,44 @@ def initialize():
 
     app.logger.info('Initial start_time : {}'.format(agent.p.start_time))
     if agent.p.start_time == None:
-        app.logger.info('Fresh agent, initializing start_time to {}'.format(datetime.now()))
-        agent.p.start_time = datetime.now()
+        agent.p.start_time = floor_date(utcnow(), minutes=15)
+        app.logger.info('Fresh agent, initializing start_time to {}'.format(agent.p.start_time))
     else:
         agent.p.start_time = agent.p.start_time.replace(tzinfo=timezone('America/Montreal'))
         elapse = utcnow() - agent.p.start_time
         if elapse.days > 2:
-            agent_now = utcnow()
+            agent_now = floor_date(utcnow(), minutes=15)
             app.logger.info('Agent too old, initializing start_time to {}'.format(agent_now))
             agent.p.start_time = agent_now
     app.logger.info('start_time : {}'.format(agent.p.start_time))
 
 @app.route('/mpc/', methods=['POST'])
 def mpc_api():
+
+
+    if utcnow() ­<= parse_date("2021-01-16T00:00:00.000000-05:00"):
+        result = {
+            'action': 0.01,
+            'sat_stpt': 0.01,
+            'sys_out_temp': 99,
+            'indoor_temp': 99,
+            'indoor_temp_setpoint': 9,
+            'occupancy_flag': 0
+        }
+    
+    else:
+        if utcnow() - parse_date("2021-01-16T00:00:00.000000-05:00") < timedelta(minutes=15):
+            blob = bucket.blob(bucket_model)
+            blob.upload_from_filename(repo_model,
+                                    content_type='application/octet-stream')
+            os.rename(repo_model, bucket_model)
+            
+            app.logger.info("Initializing agent*****...")
+            agent = torch.load('torch_model_x.pth')
+            agent.eval()
+            agent.p = PPO.P()
+            agent.p.start_time = floor_date(utcnow(), minutes=15)
+
 
     req = request.get_json()
     pickle.dump(req, open(next_path("results/req-%s.p"), "wb"))
