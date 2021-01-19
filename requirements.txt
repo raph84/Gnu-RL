@@ -1,6 +1,6 @@
 numpy
 pandas
-torch == 1.0.1.post2
+#torch == 1.0.1.post2
 flask ~= 1.1.2
 requests ~= 2.24.0
 google-cloud-pubsub ~= 2.1.0
@@ -9,3 +9,4 @@ google-cloud-storage ~= 1.22
 google-python-cloud-debugger
 pytz
 python-dateutil
+-e git://github.com/raph84/my_quick_date_util#egg=my_quick_date_util

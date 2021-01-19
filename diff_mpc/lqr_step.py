@@ -306,7 +306,7 @@ class LQRStep(Function):
                 n_total_qp_iter += 1+n_qp_iter
                 prev_kt = kt
                 Qt_ux_ = Qt_ux.clone()
-                Qt_ux_[(1-If).unsqueeze(2).repeat(1,1,Qt_ux.size(2))] = 0
+                Qt_ux_[(~If).unsqueeze(2).repeat(1,1,Qt_ux.size(2))] = 0
                 if self.n_ctrl == 1:
                     # Bad naming, Qt_uu_free_LU isn't the LU in this case.
                     Kt = -((1./Qt_uu_free_LU)*Qt_ux_)

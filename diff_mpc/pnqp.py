@@ -28,17 +28,13 @@ def pnqp(H, q, lower, upper, x_init=None, n_iter=20):
     for i in range(n_iter):
         g = util.bmv(H, x) + q
         Ic = ((x == lower) & (g > 0)) | ((x == upper) & (g < 0))
-        If = 1-Ic
+        If = ~Ic
 
-        if If.is_cuda:
-            Hff_I = util.bger(If.float(), If.float()).type_as(If)
-            not_Hff_I = 1-Hff_I
-            Hfc_I = util.bger(If.float(), Ic.float()).type_as(If)
-        else:
-            Hff_I = util.bger(If, If)
-            not_Hff_I = 1-Hff_I
-            Hfc_I = util.bger(If, Ic)
-
+        
+        Hff_I = util.bger(If.float(), If.float()).type_as(If)
+        not_Hff_I = ~Hff_I
+        Hfc_I = util.bger(If.float(), Ic.float()).type_as(If)
+        
         g_ = g.clone()
         g_[Ic] = 0.
         H_ = H.clone()
